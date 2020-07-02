@@ -95,3 +95,39 @@ prob.ab(a1, b1, a2, b2)
 # png("example_pdfdiff.png")
 pdf.diff(a1, b1, a2, b2)
 # dev.off()
+
+
+#-------------------------------------------------------------------------------
+#                                                               
+# #### 5. A/B test with R package 'abtest' (Gronau & Wagenmakers, 2019) ####
+#                                                               
+#-------------------------------------------------------------------------------
+
+conversion <- list(y1 = cumsum(y1), y2 = cumsum(y2), 
+                   n1 = 1:length(y1), n2 = 1:length(y2))
+
+## Hypothesis Testing
+
+# prior model probabilities: H+ = 0.5; H0 = 0.5
+plus.null <- c(0, 1/2, 0, 1/2) # H+ vs H0
+names(plus.null) <- c("H1", "H+", "H-", "H0")
+AB2 <- ab_test(conversion, prior_prob = plus.null)  # uses default normal prior
+
+# print results of ab_test
+print(AB2) 
+
+# visualize prior and posterior probabilities of the hypotheses 
+# as probability wheels
+png("example_probwheel.png")
+prob_wheel(AB2)
+dev.off()
+
+# plot posterior probabilities of the hypotheses sequentially
+plot_sequential(AB2)
+
+
+## Parameter Estimation
+
+# plot posterior distribution of log odds ratio
+plot_posterior(AB2, what = "logor")
+
