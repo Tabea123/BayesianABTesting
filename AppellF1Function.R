@@ -8,8 +8,7 @@
 # written by Derek S. Young (derek.young@uky.edu)
 # see https://github.com/cran/tolerance/blob/master/R/F1.R
 
-
-appell.F1 <- function(a, b, b.prime, c, x, y, ...)
+appell.F1 <- function(a, b, b.prime, c, x, y)
 {
   A1.simple <- function(u, a, b, b.prime, c, x, y)
   {
@@ -19,5 +18,6 @@ appell.F1 <- function(a, b, b.prime, c, x, y, ...)
     four <- (-b.prime)*log((1-u*y))
     return(exp(one + two + three + four))
   }
-  gamma(c)/(gamma(a)*gamma(c-a))*as.numeric(integrate(A1.simple, 0, 1, a = a, b = b, b.prime = b.prime, c = c, x = x, y = y, ...)$value)
+  gammas <- lgamma(c) - (lgamma(a)+lgamma(c-a))
+  exp(gammas) * as.numeric(integrate(A1.simple, 0, 1, a = a, b = b, b.prime = b.prime, c = c, x = x, y = y)$value)
 }
