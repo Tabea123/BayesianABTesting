@@ -21,6 +21,7 @@ library(bayesAB)
 library(hypergeo)
 library(tolerance)
 library(abtest)
+library(HDInterval)
 
 setwd("C:/Users/Tabea Hoffmann/Documents/Master/Thesis/Preregistration/")
 
@@ -29,7 +30,7 @@ data <- read.csv2("SimluatedRekentuinData2.csv")
 
 #-------------------------------------------------------------------------------
 #                                                               
-# 1. Exclude Players + Select Last Game
+#             #### 1. Exclude Players + Select Last Game  ####
 #                                                               
 #-------------------------------------------------------------------------------
 
@@ -61,11 +62,11 @@ B_success_ncrown <- ifelse(B_lastgame$clicked_crown_game == 1, 0, 1)
 
 #-------------------------------------------------------------------------------
 #                                                               
-# 2. A/B test with R package 'bayesAB' (Portman, 2019)                 
+#      ####  2. A/B test with R package 'bayesAB' (Portman, 2019) ####                
 #                                                               
 #-------------------------------------------------------------------------------
 
-## Analyze the results
+## Analyze the results 
 
 # specify uniform prior for both success probabilities + fit bayesTest object
 AB1 <- bayesTest(B_success_ncrown, 
@@ -90,7 +91,11 @@ plot(AB1, priors = FALSE, samples = FALSE)
 plot(AB1, priors = FALSE, posteriors = FALSE)
 
 
-## Analytically compute diff between A and B
+#-------------------------------------------------------------------------------
+#                                                               
+#                   #### 3. Analytically Compute P(B > A) ####
+#                                                               
+#-------------------------------------------------------------------------------
 
 # get parameter of posterior distributions
 success.A  <- sum(A_success_ncrown)
@@ -102,11 +107,6 @@ a1 <- 1 + success.A
 b1 <- 1 + failures.A
 a2 <- 1 + success.B
 b2 <- 1 + failures.B
-
-a1 <- 1 + success.B
-b1 <- 1 + failures.B
-a2 <- 1 + success.A
-b2 <- 1 + failures.A
 
 
 if (a1*b2 < a2*b1){ # why is this true for our case 
@@ -127,6 +127,12 @@ if (a1*b2 < a2*b1){ # why is this true for our case
 # posterior probability of the event theta1 > theta2 
 exp(logz - lbeta(a1, b1) - lbeta(a2, b2))
 
+
+#-------------------------------------------------------------------------------
+#                                                               
+#                 #### 4. Analytically Compute P(B) - P(A) ####
+#                                                               
+#-------------------------------------------------------------------------------
 
 # joint posterior 
 A <- beta(a1, b1)*beta(a2, b2)
@@ -157,16 +163,16 @@ points(x = 0, y = beta(a1+a2-1, b1 + b2 -1) / A, pch = 20)
 
 #-------------------------------------------------------------------------------
 #                                                               
-# 3. A/B test with R package 'abtest' (Gronau & Wagenmakers, 2019)
+# #### 5. A/B test with R package 'abtest' (Gronau & Wagenmakers, 2019) ####
 #                                                               
 #-------------------------------------------------------------------------------
 
-### Load Preprocessed Data 
+#### Load Preprocessed Data ####
 
 data4 <- read.csv2("Rekentuin_ABTestData2.csv") 
 conversion <- as.list(data4)
 
-### Analyze the results
+#### Analyze the results ####
 
 # success probabilities
 tail(conversion$y1,1)/tail(conversion$n1, 1)
@@ -196,3 +202,17 @@ plot_sequential(AB2)
 # plot posterior distribution of log odds ratio
 plot_posterior(AB2, what = "logor")
 
+
+# sequential analysis of CI 
+CI.upper <- NULL
+CI.lower <- NULL
+
+# monitor CI in tranches of 10 data points
+for(i in seq(10, 100, 10)){
+  ab1 <- ab_test(lapply(conversion, '[', 1:i), prior_prob = plus.null, posterior = T)
+  # store values in two separate vectors
+  CI.lower <- c(CI.lower, hdi(ab1$post$Hplus$logor[1:10000])[1])
+  CI.upper <- c(CI.upper, hdi(ab1$post$Hplus$logor[1:10000])[2])
+}
+
+CI.df <- data.frame(CI.lower, CI.upper)
