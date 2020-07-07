@@ -79,21 +79,21 @@ prob.ab(a1, b1, a2, b2)
 
 
 ## Analytically compute P(B) - P(A)
-pdf.diff(a1, b1, a2, b2)
+pdf.diff(a2, b2, a1, b1)
 
 
 ## for large a1, b1, a2, b2: normal approximation of difference between beta distributions
 # normal approximation of beta 1
 mu1    <- a1/(a1+b1)
-sigma1 <- sqrt(a1*b1)/((a1+b1)^2*(a1+b1+1))
+sigma1 <- sqrt((a1*b1)/((a1+b1)^2*(a1+b1+1)))
 # normal approximation of beta 2
 mu2    <- a2/(a2+b2)
-sigma2 <- sqrt(a2*b2)/((a2+b2)^2*(a2+b2+1))
+sigma2 <- sqrt((a2*b2)/((a2+b2)^2*(a2+b2+1)))
 # parameter values for difference
 mu.ges    <- mu2 - mu1
 sigma.ges <- sigma2 - sigma1
 # plot density
-plot(density(rnorm(100, mu.ges, sigma.ges)))
+plot(density(rnorm(100, mu.ges, sigma.ges)), bty = "n")
 
 
 #-------------------------------------------------------------------------------
