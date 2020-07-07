@@ -15,15 +15,90 @@
 #-------------------------------------------------------------------------------
 
 rm(list = ls())
-setwd("C:/Users/Tabea Hoffmann/Documents/Master/Thesis/Preregistration")
 
 # packages needed
 library(dplyr)
+library(bayesAB)
 library(abtest)
 
 #-------------------------------------------------------------------------------
 #                                                               
-# 1. A/B test with R package 'abtest' (Gronau & Wagenmakers, 2019)
+#      ####  1. A/B test with R package 'bayesAB' (Portman, 2019) ####                
+#                                                               
+#-------------------------------------------------------------------------------
+
+# read in data
+data <- read.csv2("SimulatedWebshopData1.csv")
+
+A_success <- ifelse(subset(data, version == "A")$successes == 1, 1, 0)
+B_success <- ifelse(subset(data, version == "B")$successes == 1, 1, 0)
+
+# specify uniform prior for both success probabilities + fit bayesTest object
+AB1 <- bayesTest(A_success, 
+                 B_success, 
+                 priors = c('alpha' = 1, 'beta' = 1), 
+                 n_samples = 1e5, 
+                 distribution = 'bernoulli')
+
+# check results
+summary(AB1) # A correpsonds to version B
+
+## Visualize the results
+
+# plot prior distribution
+plot(AB1, posteriors = FALSE, samples = FALSE) # A correpsonds to version B
+
+# posterior distributions,
+plot(AB1, priors = FALSE, samples = FALSE)
+
+# and monte carlo 'integrated' samples (probability that version A is better
+# than version B) 
+
+# first switch A and B 
+AB11 <- bayesTest(B_success, 
+                  A_success, 
+                  priors = c('alpha' = 1, 'beta' = 1), 
+                  n_samples = 1e5, 
+                  distribution = 'bernoulli')
+plot(AB11, priors = FALSE, posteriors = FALSE)
+
+## Analytically compute P(A > B)
+# get parameter of posterior distributions
+success.A  <- sum(A_success)
+failures.A <- length(A_success) - success.A
+success.B  <- sum(B_success)
+failures.B <- length(B_success) - success.B
+
+a1 <- 1 + success.A
+b1 <- 1 + failures.A
+a2 <- 1 + success.B
+b2 <- 1 + failures.B
+
+# probability theta2 > theta1
+prob.ab(a1, b1, a2, b2)
+
+
+## Analytically compute P(B) - P(A)
+pdf.diff(a1, b1, a2, b2)
+
+
+## for large a1, b1, a2, b2: normal approximation of difference between beta distributions
+# normal approximation of beta 1
+mu1    <- a1/(a1+b1)
+sigma1 <- sqrt(a1*b1)/((a1+b1)^2*(a1+b1+1))
+# normal approximation of beta 2
+mu2    <- a2/(a2+b2)
+sigma2 <- sqrt(a2*b2)/((a2+b2)^2*(a2+b2+1))
+# parameter values for difference
+mu.ges    <- mu2 - mu1
+sigma.ges <- sigma2 - sigma1
+# plot density
+plot(density(rnorm(100, mu.ges, sigma.ges)))
+
+
+#-------------------------------------------------------------------------------
+#                                                               
+#   #### 2. A/B test with R package 'abtest' (Gronau & Wagenmakers, 2019) ####
 #                                                               
 #-------------------------------------------------------------------------------
 
@@ -36,7 +111,8 @@ conversion <- as.list(data)
 
 ## Specify Three Priors
 # indifferent person
-indifferent <- elicit_prior(q = c(-1.25, 0, 1.25), prob = c(.025, .5, .975), 
+indifferent <- elicit_prior(q = c(-1.25, 0, 1.25), 
+                            prob = c(.025, .5, .975), 
                             what = "logor")
 
 # conservative person; OR: 1.05
