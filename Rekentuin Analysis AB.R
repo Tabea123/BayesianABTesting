@@ -13,7 +13,7 @@
 #                                                               
 #-------------------------------------------------------------------------------
 
-rm(list = ls())
+# rm(list = ls())
 
 # packages needed
 library(dplyr)
@@ -171,7 +171,7 @@ text("95% HDI", x = mean(HDI), y = 4.5, cex = 1.8)
 
 ## Load Preprocessed Data 
 
-data4 <- read.csv2("Rekentuin_ABTestData2.csv") 
+data4 <- read.csv2("Rekentuin_ABTestData.csv") 
 conversion <- as.list(data4)
 
 # success probabilities
@@ -208,7 +208,7 @@ CI.upper <- NULL
 CI.lower <- NULL
 
 # monitor CI in tranches of 10 data points
-for(i in seq(10, length(conversion$n1), 10)){
+for(i in seq(5, length(conversion$n1), 1)){
   ab1 <- ab_test(lapply(conversion, '[', 1:i), prior_prob = plus.null, posterior = T)
   # store values in two separate vectors
   CI.lower <- c(CI.lower, hdi(ab1$post$Hplus$logor)[1])
@@ -216,3 +216,20 @@ for(i in seq(10, length(conversion$n1), 10)){
 }
 
 CI.df <- data.frame(CI.lower, CI.upper)
+y.upper <- CI.df[,1]
+y.lower <- CI.df[,2]
+
+plot(1:length(conversion$n1), ylim = c(0,3), 
+     type = "n", xlab = "", ylab = "", yaxt = "n", bty = "n", axes = FALSE, 
+     cex.lab = 1.3, cex.axis = 1.3, cex.main = 2, las = 1, pch = 21, lwd = 4,   
+     bg = "grey")
+
+axis(1, at = seq(0, 140, by = 10), labels = seq(0, 140, 10))
+axis(2, at = seq(0, 3, 0.5), labels = seq(0, 3, 0.5))
+
+mtext("n", side = 1, line = 3, las = 1, cex = 2, font = 0.2, adj = 0.5)
+mtext("Width of CI", side = 2, line = 3, cex = 2, font = 2, las = 0)
+
+
+polygon(c(5:length(conversion$n1),length(conversion$n1):5), c(y.upper, rev(y.lower)), 
+        col = "lightgrey", border = NA)
