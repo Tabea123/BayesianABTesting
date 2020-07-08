@@ -30,11 +30,16 @@ pdf.diff <- function(a1, b1, a2, b2){
          type = "l", bty = "n", lwd = 2,
          xlab = "", ylab = "", axes = F)
     
-    axis1 <- axis(1)
-    axis2 <- axis(2)
+    axis(1, at = c(-1.00, -0.75, -0.50, -0.25,  0.00,  0.25,  0.50,  0.75,  1.00), 
+         labels = c(-1.00, -0.75, -0.50, -0.25,  0.00,  0.25,  0.50,  0.75,  1.00), 
+         lwd = 2, lwd.ticks = 2, line = -0.1)
+    axis(2, at = seq(0, 6, 1),  
+         lwd = 2, lwd.ticks = 2, line = -0.2)
     
-    mtext(expression(paste("Difference", ~delta)), side = 1, line = 2.5, cex = 1.5)
-    mtext("Density", side = 2, line = 2.7, cex = 1.5)
+    mtext(expression(paste("Difference", ~delta)), 
+          side = 1, line = 3, cex = 2.4, font = 2, adj = 0.5)
+    mtext("Density", side = 2, line = 2.5, cex = 2.4, font = 2, las = 0)
+    
   }
   
   plot.smaller1 <- plotting(ps)
