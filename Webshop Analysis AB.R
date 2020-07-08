@@ -83,6 +83,7 @@ prob.ab(a1, b1, a2, b2)
 pdf.diff(a2, b2, a1, b1)
 
 
+## alternatively normal approximation for large a1, b1, a2, b2
 # normal approximation of beta 1
 mu1    <- a1/(a1+b1)
 sigma1 <- sqrt((a1*b1)/((a1+b1)^2*(a1+b1+1)))
@@ -91,7 +92,8 @@ mu2    <- a2/(a2+b2)
 sigma2 <- sqrt((a2*b2)/((a2+b2)^2*(a2+b2+1)))
 # parameter values for difference
 mu.ges    <- mu2 - mu1
-sigma.ges <- sigma2 - sigma1
+sigma.ges <- sigma2 + sigma1
+
 
 # plot 
 delta <- rnorm(1000000, mu.ges, sigma.ges)
@@ -101,26 +103,25 @@ par(cex.main = 1.5, mar = c(5.5, 5.5, 5.9, 3) + 0.1, mgp = c(3.5, 1, 0),
 
 hist(delta, 
      freq = F, main = "", xlab = "", ylab = " ", 
-     xlim = c(0.027, 0.03), ylim = c(0, 1500),
+     xlim = c(0, 0.05), ylim = c(0, 70),
      axes = FALSE, breaks = 17, yaxt = "n", xaxt = "n", col = "grey")
 
-axis(1, at = c(0.025, 0.026, 0.027, 0.028, 0.029, 0.030), 
-     labels = c(0.025, 0.026, 0.027, 0.028, 0.029, 0.030), 
+axis(1, at = c(0, 0.01, 0.02, 0.03, 0.04, 0.05), 
+     labels = c(0, 0.01, 0.02, 0.03, 0.04, 0.05), 
      lwd = 2, lwd.ticks = 2, line = -0.1)
-axis(2, at = seq(0, 1500, 150),  
+axis(2, at = seq(0, 70, 10),  
      lwd = 2, lwd.ticks = 2, line = -0.2)
 
 mtext(expression(paste("Difference", ~delta)), 
-      side = 1, line = 4, cex = 2.4, font = 2, adj = 0.5)
-mtext("Density", side = 2, line = 3.7, cex = 2.4, font = 2, las = 0)
+      side = 1, line = 3, cex = 2.4, font = 2, adj = 0.5)
+mtext("Density", side = 2, line = 4, cex = 2.4, font = 2, las = 0)
 
 lines(density(delta), lwd = 4)
 
 HDI <- hdi(delta)
-arrows(x0 = HDI[1], y0 = 1300, x1 = HDI[2], y1 = 1300, angle = 90, 
+arrows(x0 = HDI[1], y0 = 65, x1 = HDI[2], y1 = 65, angle = 90, 
        length = 0.1, code = 3, lwd = 2.2)
-text("95% HDI", x = mean(HDI), y = 1390, cex = 1.8)
-
+text("95% HDI", x = mean(HDI), y = 70, cex = 1.8)
 
 #-------------------------------------------------------------------------------
 #                                                               
