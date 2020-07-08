@@ -8,6 +8,9 @@
 # Schmidt, M. N., & Morup, M. (2019). Efficient computation for Bayesian 
 # comparison of two proportions. Statistics & Probability Letters, 145, 57-62.
 
+# load package needed
+library(hypergeo)
+
 prob.ab <- function(a1, b1, a2 ,b2){
   
   if (a1*b2 > a2*b1){ 
