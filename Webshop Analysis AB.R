@@ -19,7 +19,10 @@ rm(list = ls())
 # packages needed
 library(dplyr)
 library(bayesAB)
+library(hypergeo)
+library(tolerance)
 library(abtest)
+library(HDInterval)
 
 #-------------------------------------------------------------------------------
 #                                                               
@@ -40,26 +43,24 @@ AB1 <- bayesTest(A_success,
                  n_samples = 1e5, 
                  distribution = 'bernoulli')
 
-# check results
-summary(AB1) # A correpsonds to version B
-
-## Visualize the results
-
 # plot prior distribution
 plot(AB1, posteriors = FALSE, samples = FALSE) # A correpsonds to version B
 
 # posterior distributions,
 plot(AB1, priors = FALSE, samples = FALSE)
 
-# and monte carlo 'integrated' samples (probability that version A is better
-# than version B) 
-
-# first switch A and B 
+# first switch A and B because of our hypothesis that B > A
 AB11 <- bayesTest(B_success, 
                   A_success, 
                   priors = c('alpha' = 1, 'beta' = 1), 
                   n_samples = 1e5, 
                   distribution = 'bernoulli')
+
+# check results
+summary(AB11) # A correpsonds to version B
+
+# monte carlo 'integrated' samples (probability that version A is 
+# better than version B) 
 plot(AB11, priors = FALSE, posteriors = FALSE)
 
 ## Analytically compute P(A > B)
@@ -82,7 +83,6 @@ prob.ab(a1, b1, a2, b2)
 pdf.diff(a2, b2, a1, b1)
 
 
-## for large a1, b1, a2, b2: normal approximation of difference between beta distributions
 # normal approximation of beta 1
 mu1    <- a1/(a1+b1)
 sigma1 <- sqrt((a1*b1)/((a1+b1)^2*(a1+b1+1)))
@@ -92,8 +92,34 @@ sigma2 <- sqrt((a2*b2)/((a2+b2)^2*(a2+b2+1)))
 # parameter values for difference
 mu.ges    <- mu2 - mu1
 sigma.ges <- sigma2 - sigma1
-# plot density
-plot(density(rnorm(100, mu.ges, sigma.ges)), bty = "n")
+
+# plot 
+delta <- rnorm(1000000, mu.ges, sigma.ges)
+
+par(cex.main = 1.5, mar = c(5.5, 5.5, 5.9, 3) + 0.1, mgp = c(3.5, 1, 0), 
+    cex.lab = 1.5, font.lab = 2, cex.axis = 1.8, bty = "n", las = 1)
+
+hist(delta, 
+     freq = F, main = "", xlab = "", ylab = " ", 
+     xlim = c(0.027, 0.03), ylim = c(0, 1500),
+     axes = FALSE, breaks = 17, yaxt = "n", xaxt = "n", col = "grey")
+
+axis(1, at = c(0.025, 0.026, 0.027, 0.028, 0.029, 0.030), 
+     labels = c(0.025, 0.026, 0.027, 0.028, 0.029, 0.030), 
+     lwd = 2, lwd.ticks = 2, line = -0.1)
+axis(2, at = seq(0, 1500, 150),  
+     lwd = 2, lwd.ticks = 2, line = -0.2)
+
+mtext(expression(paste("Difference", ~delta)), 
+      side = 1, line = 4, cex = 2.4, font = 2, adj = 0.5)
+mtext("Density", side = 2, line = 3.7, cex = 2.4, font = 2, las = 0)
+
+lines(density(delta), lwd = 4)
+
+HDI <- hdi(delta)
+arrows(x0 = HDI[1], y0 = 1300, x1 = HDI[2], y1 = 1300, angle = 90, 
+       length = 0.1, code = 3, lwd = 2.2)
+text("95% HDI", x = mean(HDI), y = 1390, cex = 1.8)
 
 
 #-------------------------------------------------------------------------------
