@@ -23,10 +23,8 @@ library(tolerance)
 library(abtest)
 library(HDInterval)
 
-setwd("C:/Users/Tabea Hoffmann/Documents/Master/Thesis/Preregistration/")
-
 # load simulated data
-data <- read.csv2("SimluatedRekentuinData2.csv")
+data <- read.csv2("SimluatedRekentuinData.csv")
 
 #-------------------------------------------------------------------------------
 #                                                               
@@ -69,7 +67,20 @@ B_success_ncrown <- ifelse(B_lastgame$clicked_crown_game == 1, 0, 1)
 ## Analyze the results 
 
 # specify uniform prior for both success probabilities + fit bayesTest object
-AB1 <- bayesTest(B_success_ncrown, 
+AB1 <- bayesTest(A_success_ncrown, 
+                 B_success_ncrown, 
+                 priors = c('alpha' = 1, 'beta' = 1), 
+                 n_samples = 1e5, 
+                 distribution = 'bernoulli')
+
+# plot prior distribution
+plot(AB1, posteriors = FALSE, samples = FALSE) # A correpsonds to version B
+
+# posterior distributions,
+plot(AB1, priors = FALSE, samples = FALSE)
+
+# switch A and B because of hypothesis B > A
+AB11 <- bayesTest(B_success_ncrown, 
                  A_success_ncrown, 
                  priors = c('alpha' = 1, 'beta' = 1), 
                  n_samples = 1e5, 
@@ -78,17 +89,9 @@ AB1 <- bayesTest(B_success_ncrown,
 # check results
 summary(AB1) # A correpsonds to version B
 
-## Visualize the results
-
-# plot prior distribution
-plot(AB1, posteriors = FALSE, samples = FALSE) # A correpsonds to version B
-
-# posterior distributions,
-plot(AB1, priors = FALSE, samples = FALSE)
-
 # and monte carlo 'integrated' samples (probability that version A is better
 # than version B) 
-plot(AB1, priors = FALSE, posteriors = FALSE)
+plot(AB11, priors = FALSE, posteriors = FALSE)
 
 
 #-------------------------------------------------------------------------------
@@ -108,24 +111,8 @@ b1 <- 1 + failures.A
 a2 <- 1 + success.B
 b2 <- 1 + failures.B
 
-
-if (a1*b2 < a2*b1){ # why is this true for our case 
-  
-  # normal series
-  logz <- lgamma(a1 + a2) + lgamma(b1 + b2) - lgamma(a1 + b1 + a2 + b2 - 1) +
-    log(genhypergeo(U = c(1, 1-a1, 1-b2), L = c(b1 + 1, a2 + 1), z = 1, 
-                    tol = 1e-15,  series = T)) - log(b1*a2)
-  
-} else {
-  
-  # flipped series
-  logz <- lgamma(a1 + a2) + lgamma(b1 + b2) - lgamma(a1 + b1 + a2 + b2 - 1) +
-    log(genhypergeo(U = c(1, 1-b1, 1-a2), L = c(a1 + 1, b2 + 1), z = 1, 
-                    tol = 1e-15,  series = T)) - log(a1*b2)
-}
-
-# posterior probability of the event theta1 > theta2 
-exp(logz - lbeta(a1, b1) - lbeta(a2, b2))
+# probability theta2 > theta1
+prob.ab(a1, b1, a2, b2)
 
 
 #-------------------------------------------------------------------------------
@@ -134,45 +121,58 @@ exp(logz - lbeta(a1, b1) - lbeta(a2, b2))
 #                                                               
 #-------------------------------------------------------------------------------
 
-# joint posterior 
-A <- beta(a1, b1)*beta(a2, b2)
+pdf.diff(a2, b2, a1, b1)
 
-# for 0 < p =< 1
-smaller1 <- function(p){
-  beta(a2, b1)*(p)^(b1+b2-1)*(1-p)^(a2+b1-1)*
-    F1(b1, a1+b1+a2+b2-2, 1-a1, b1+a2, (1-p), (1-p^2)) / A
-}
+## alternatively normal approximation for large a1, b1, a2, b2
+# normal approximation of beta 1
+mu1    <- a1/(a1+b1)
+sigma1 <- sqrt((a1*b1)/((a1+b1)^2*(a1+b1+1)))
+# normal approximation of beta 2
+mu2    <- a2/(a2+b2)
+sigma2 <- sqrt((a2*b2)/((a2+b2)^2*(a2+b2+1)))
+# parameter values for difference
+mu.ges    <- mu2 - mu1
+sigma.ges <- sigma2 + sigma1
 
-ps <- seq(0.01, 1, 0.01)
+# plot 
+delta <- rnorm(1000000, mu.ges, sigma.ges)
+HDI <- hdi(delta)
 
-ymax <- beta(a1+a2-1, b1 + b2 -1) / A
-plot(x = ps,y = mapply(smaller1, ps), xlim = c(-1, 1), type = "l", ylab = "pdf")
+par(cex.main = 1.5, mar = c(5.5, 5.5, 5.9, 3) + 0.1, mgp = c(3.5, 1, 0), 
+    cex.lab = 1.5, font.lab = 2, cex.axis = 1.8, bty = "n", las = 1)
 
-# for -1 <= p < 0
-smaller0 <- function(p){
-  beta(a1, b2)*(-p)^(b1+b2-1)*(1+p)^(a1+b2-1)*
-    F1(b2, 1-a2, a1+a2+b1+b2-2, a1+b2, (1-p^2), (1+p)) / A
-}
+hist(delta, 
+     freq = F, main = "", xlab = "", ylab = " ", 
+     xlim = c(-1, 1), ylim = c(0, 6),
+     axes = FALSE, breaks = 17, yaxt = "n", xaxt = "n", col = "grey")
 
-ps <- seq(-1, -0.01, 0.01)
-lines(x = ps,y = mapply(smaller0, ps), xlim = c(-1, 0),type = "l")
+axis(1, at = c(-1, -0.75, -0.50, -0.25, 0, 0.25, 0.50, 0.75, 1), 
+     labels = c(-1, -0.75, -0.50, -0.25, 0, 0.25, 0.50, 0.75, 1),
+     lwd = 2, lwd.ticks = 2, line = -0.1)
+axis(2, at = seq(0, 6, 1),  
+     lwd = 2, lwd.ticks = 2, line = -0.2)
 
-# p = 0
-points(x = 0, y = beta(a1+a2-1, b1 + b2 -1) / A, pch = 20)
+mtext(expression(paste("Difference", ~delta)), 
+      side = 1, line = 3, cex = 2.4, font = 2, adj = 0.5)
+mtext("Density", side = 2, line = 3, cex = 2.4, font = 2, las = 0)
+
+lines(density(delta), lwd = 4)
+
+arrows(x0 = HDI[1], y0 = 4, x1 = HDI[2], y1 = 4, angle = 90, 
+       length = 0.1, code = 3, lwd = 2.2)
+text("95% HDI", x = mean(HDI), y = 4.5, cex = 1.8)
 
 
 #-------------------------------------------------------------------------------
 #                                                               
-# #### 5. A/B test with R package 'abtest' (Gronau & Wagenmakers, 2019) ####
+#   #### 5. A/B test with R package 'abtest' (Gronau & Wagenmakers, 2019) ####
 #                                                               
 #-------------------------------------------------------------------------------
 
-#### Load Preprocessed Data ####
+## Load Preprocessed Data 
 
 data4 <- read.csv2("Rekentuin_ABTestData2.csv") 
 conversion <- as.list(data4)
-
-#### Analyze the results ####
 
 # success probabilities
 tail(conversion$y1,1)/tail(conversion$n1, 1)
@@ -208,11 +208,11 @@ CI.upper <- NULL
 CI.lower <- NULL
 
 # monitor CI in tranches of 10 data points
-for(i in seq(10, 100, 10)){
+for(i in seq(10, length(conversion$n1), 10)){
   ab1 <- ab_test(lapply(conversion, '[', 1:i), prior_prob = plus.null, posterior = T)
   # store values in two separate vectors
-  CI.lower <- c(CI.lower, hdi(ab1$post$Hplus$logor[1:10000])[1])
-  CI.upper <- c(CI.upper, hdi(ab1$post$Hplus$logor[1:10000])[2])
+  CI.lower <- c(CI.lower, hdi(ab1$post$Hplus$logor)[1])
+  CI.upper <- c(CI.upper, hdi(ab1$post$Hplus$logor)[2])
 }
 
 CI.df <- data.frame(CI.lower, CI.upper)
