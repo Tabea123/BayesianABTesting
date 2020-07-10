@@ -212,7 +212,7 @@ plot_posterior(AB2, what = "p1p2")
 CI.upper <- NULL
 CI.lower <- NULL
 
-# monitor CI in tranches of 10 data points
+# monitor CI for every data point
 for(i in seq(1, length(conversion$n1), 1)){
   ab1 <- ab_test(lapply(conversion, '[', 1:i), prior_prob = plus.null, posterior = T)
   # store values in two separate vectors
