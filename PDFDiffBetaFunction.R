@@ -9,6 +9,7 @@
 # difference of two proportions. Communications in Statistics-Theory and Methods, 
 # 22, 1755-1771.
 
+# p = p1 - p2
 
 pdf.diff <- function(a1, b1, a2, b2){
   
@@ -22,13 +23,15 @@ pdf.diff <- function(a1, b1, a2, b2){
   }
   
   ps   <- seq(0.003, 1, 0.001)
+
+  par(cex.main = 1.5,  mar = c(5, 5, 3, 3) + 0.1, mgp = c(3.5, 1, 0), 
+      cex.lab = 1.5, font.lab = 2, cex.axis = 1.6, bty = "n", las = 1)
   
   plotting <- function(ps){
-    plot(x = ps,
-         y = mapply(smaller1, ps), 
-         xlim = c(-1, 1), ylim = c(0, 6),
-         type = "l", bty = "n", lwd = 2,
-         xlab = "", ylab = "", axes = F)
+    
+    plot(x = ps, y = mapply(smaller1, ps), xlim = c(-1, 1), ylim = c(0, 6),
+         type = "l", bty = "n", lwd = 2, xlab = "", ylab = "", axes = F,
+         cex.lab = 1.5, cex.axis = 1.8, cex.main = 1.5, las = 1, bg = "grey")
     
     axis(1, at = c(-1.00, -0.75, -0.50, -0.25,  0.00,  0.25,  0.50,  0.75,  1.00), 
          labels = c(-1.00, -0.75, -0.50, -0.25,  0.00,  0.25,  0.50,  0.75,  1.00), 
@@ -37,8 +40,8 @@ pdf.diff <- function(a1, b1, a2, b2){
          lwd = 2, lwd.ticks = 2, line = -0.2)
     
     mtext(expression(paste("Difference", ~delta)), 
-          side = 1, line = 3, cex = 2.4, font = 2, adj = 0.5)
-    mtext("Density", side = 2, line = 2.5, cex = 2.4, font = 2, las = 0)
+          side = 1, line = 3, las = 1, cex = 2, font = 0.2, adj = 0.5)
+    mtext("Density", side = 2, line = 2.5, cex = 2, font = 2, las = 0)
     
   }
   
@@ -52,10 +55,8 @@ pdf.diff <- function(a1, b1, a2, b2){
   
   ps <- seq(-1, -0.005, 0.001)
   
-  plot.smaller0 <- lines(x = ps,
-                         y = mapply(smaller0, ps), 
-                         xlim = c(-1, 0),
-                         type = "l", lwd = 2)
+  plot.smaller0 <- lines(x = ps, y = mapply(smaller0, ps), 
+                         xlim = c(-1, 0), type = "l", lwd = 2)
   
   # p = 0
   point.zero <- points(x = 0,
