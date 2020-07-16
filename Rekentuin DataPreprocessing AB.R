@@ -17,9 +17,7 @@ rm(list = ls())
 
 library(dplyr)
 
-setwd("C:/Users/Tabea Hoffmann/Documents/Master/Thesis/Preregistration/")
-
-data <- read.csv2("SimluatedRekentuinData2.csv")
+data <- read.csv2("SimluatedRekentuinData.csv")
 
 #-------------------------------------------------------------------------------
 #                                                               
@@ -104,8 +102,6 @@ conversion <- list(n1 = n.A, y1 = conversion.A, n2 = n.B, y2 = conversion.B)
 #                                                               
 #-------------------------------------------------------------------------------
 
-write.csv2(as.data.frame(conversion), "Rekentuin_ABTestData2.csv", 
+write.csv2(as.data.frame(conversion), "Rekentuin_ABTestData.csv", 
            row.names = FALSE)
-
-
 
