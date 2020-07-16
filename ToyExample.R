@@ -6,7 +6,8 @@
 
 # input:  -
 # output: -
-# note: run appellF1.R, pfdiff.R, and probab.R before running this script
+# note: run AppellF1Function.R, PDFDiffBetaFunction.R and ProbABFunction.R 
+# before running this script
 
 #-------------------------------------------------------------------------------
 #                                                               
@@ -25,10 +26,10 @@ library(abtest)
 library(HDInterval)
 library(grDevices)
 
-### Data Fabrication  
-# y1 <- sample(c(rep(0, 65),rep(1, 35)))
+### Data Fabrication
+# y1 <- sample(c(rep(0, 130),rep(1, 70)))
 # n1 <- length(y1)
-# y2 <- sample(c(rep(0, 50),rep(1, 50)))
+# y2 <- sample(c(rep(0, 100),rep(1, 100)))
 # n2 <- length(y1)
 # 
 # A.successprob <- sum(y1)/max(n1)
@@ -38,6 +39,7 @@ library(grDevices)
 # write.csv2(data, file = "example_data.csv")
 
 data <- read.csv2("example_data.csv")
+
 #-------------------------------------------------------------------------------
 #                                                               
 # 2. A/B test with R package 'bayesAB' (Portman, 2019)                 
@@ -201,7 +203,7 @@ dev.off()
 
 # plot posterior probabilities of the hypotheses sequentially
 # 530 / 72 (width) by 400 / 72 (height); in pixels, 530 (width) by 400 (height).
-png("example_sequential.png", width = 530/72, height = 400/72, units = "in", res = 600)
+cairo_pdf("example_sequential.pdf", width = 530/72, height = 400/72)
 plot_sequential(AB2)
 dev.off()
 
@@ -256,4 +258,108 @@ mtext("Width of CI", side = 2, line = 3.25, cex = 2, font = 2, las = 0)
 
 polygon(c(1:length(conversion$n1),length(conversion$n1):1), c(y.upper, rev(y.lower)), 
         col = "lightgrey", border = NA)
+dev.off()
+
+
+#-------------------------------------------------------------------------------
+#                                                               
+# #### 6. Comparison P(diff > 0)   
+#                                                               
+#-------------------------------------------------------------------------------
+
+### Exact Difference
+a1 <- 1
+b1 <- 1
+a2 <- 1
+b2 <- 1
+
+delta.exact  <- numeric(length(data$y1))
+for(i in 1:length(data$y1)){
+  
+  a2 <- a2 + data$y1[i]
+  b2 <- b2 + ifelse(data$y1 == 1, 0, 1)[i]
+  a1 <- a1 + data$y2[i]
+  b1 <- b1 + ifelse(data$y2 == 1, 0, 1)[i]
+  
+  delta.exact[i] <- integrate(pdf.diff2, 0, 1, stop.on.error = F)$value
+}
+
+
+### Normal Approximation
+a1 <- 1
+b1 <- 1
+a2 <- 1
+b2 <- 1
+
+delta.approx <- numeric(length(data$y1))
+for(i in 1:length(data$y1)){
+  
+  a1 <- a1 + data$y1[i]
+  b1 <- b1 + ifelse(data$y1 == 1, 0, 1)[i]
+  a2 <- a2 + data$y2[i]
+  b2 <- b2 + ifelse(data$y2 == 1, 0, 1)[i]
+  
+  mu1       <- a1/(a1+b1)
+  sigma1    <- sqrt((a1*b1)/((a1+b1)^2*(a1+b1+1)))
+  mu2       <- a2/(a2+b2)
+  sigma2    <- sqrt((a2*b2)/((a2+b2)^2*(a2+b2+1)))
+  mu.ges    <- mu2 - mu1
+  sigma.ges <- sigma1 + sigma2
+  
+  norm.approx <- function(x){dnorm(x, mean = mu.ges, sd = sigma.ges)}
+  delta.approx[i] <- integrate(norm.approx, 0, 1)$value
+}
+
+
+#### H+ vs H-
+posprob_Hplus <- numeric(length(data$y1))
+
+for(i in 1:length(data$y1)){
+  conversion <- list(y1 = cumsum(data$y1)[1:i], y2 = cumsum(data$y2)[1:i], 
+                     n1 = 1:length(data$y1[1:i]), n2 = 1:length(data$y2[1:i]))
+  
+  
+  plus.minus <- c(0, 1/2, 1/2, 0) # H+ vs H0
+  names(plus.minus) <- c("H1", "H+", "H-", "H0")
+  
+  AB2 <- ab_test(conversion, prior_prob = plus.minus)  # uses default normal prior
+  posprob_Hplus[i] <- AB2$post_prob[2]
+}
+
+png("example_sequentialdiff.png", width = 18, height = 18, units = "cm", res = 600)
+
+par(cex.main = 1.5, mar = c(5, 5, 3, 3) + 0.1, mgp = c(3.5, 1, 0), 
+    cex.lab = 1.5, font.lab = 2, cex.axis = 1.6, bty = "n", las = 1)
+
+plot(delta.approx, type = "l", ylim = c(0, 1), xlim = c(0, 80),
+     bty = "n", xlab = "", ylab = "", axes = F, las = 1, col = "lightblue", 
+     lwd = 2, cex.lab = 1.5, cex.axis = 1.8, cex.main = 1.5)
+
+axis(1, at = seq(0, 80, 10), labels = seq(0, 80, 10), 
+     lwd = 2, lwd.ticks = 2, line = -0.1)
+axis(2, at = seq(0, 1, 0.1), lwd = 2, lwd.ticks = 2, line = -0.2)
+
+mtext(expression(paste("P(", ~delta, "> = 0)")), side = 2, 
+      line = 3, las = 0, cex = 2, font = 0.2, adj = 0.5)
+mtext("n", side = 1, line = 2.5, cex = 2, font = 2, las = 1)
+
+lines(delta.exact, lty = 2, lwd = 2, col = "pink")
+lines(posprob_Hplus, lty = 3, lwd = 2, col = "orange")
+
+
+legend(42, 0.2, lty = c(1, 2, 3), bty = "n",
+       legend = c("Normal Approximation","Exact Difference", 
+                  "Posterior Probability H+"), 
+       col = c("lightblue", "pink", "orange"))
+
+dev.off()
+
+
+pdf.delta.approx <- rnorm(100000, mu.ges, sigma.ges)
+
+png("example_diffdistributions.png")
+pdf.diff(a2, b2, a1, b1)
+lines(density(pdf.delta.approx), lwd = 4, lty = 2)
+legend(-1, 6, lty = c(1, 2), bty = "n",
+       legend = c("Exact Difference", "Normal Approximation"), y.intersp = 1.5)
 dev.off()
