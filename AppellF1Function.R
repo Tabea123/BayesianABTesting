@@ -12,12 +12,15 @@ appell.F1 <- function(a, b, b.prime, c, x, y)
 {
   A1.simple <- function(u, a, b, b.prime, c, x, y)
   {
-    one <- (a-1)*log(u) 
-    two <- (c-a-1)*log(1-u)
+    one   <- (a-1)*log(u) 
+    two   <- (c-a-1)*log(1-u)
     three <- (-b)*log(1-u*x)
-    four <- (-b.prime)*log((1-u*y))
+    four  <- (-b.prime)*log((1-u*y))
+    
     return(exp(one + two + three + four))
   }
   gammas <- lgamma(c) - (lgamma(a)+lgamma(c-a))
-  exp(gammas) * as.numeric(integrate(A1.simple, 0, 1, a = a, b = b, b.prime = b.prime, c = c, x = x, y = y)$value)
+  exp(gammas) * as.numeric(integrate(A1.simple, 0, 1, 
+                                     a = a, b = b, b.prime = b.prime, c = c, 
+                                     x = x, y = y)$value)
 }
