@@ -7,6 +7,7 @@
 # input:  -
 # output: SimulatedWebshopData.csv
 
+# note: run appellF1.R, pfdiff.R, and probab.R before running this script
 
 #-------------------------------------------------------------------------------
 #                                                               
@@ -44,7 +45,7 @@ AB1 <- bayesTest(A_success,
                  distribution = 'bernoulli')
 
 # plot prior distribution
-plot(AB1, posteriors = FALSE, samples = FALSE) # A correpsonds to version B
+plot(AB1, posteriors = FALSE, samples = FALSE) 
 
 # posterior distributions,
 plot(AB1, priors = FALSE, samples = FALSE)
@@ -98,8 +99,8 @@ sigma.ges <- sigma2 + sigma1
 # plot 
 delta <- rnorm(1000000, mu.ges, sigma.ges)
 
-par(cex.main = 1.5, mar = c(5.5, 5.5, 5.9, 3) + 0.1, mgp = c(3.5, 1, 0), 
-    cex.lab = 1.5, font.lab = 2, cex.axis = 1.8, bty = "n", las = 1)
+par(cex.main = 1.5,  mar = c(5, 5, 3, 3) + 0.1, mgp = c(3.5, 1, 0), 
+    cex.lab = 1.5, font.lab = 2, cex.axis = 1.6, bty = "n", las = 1)
 
 hist(delta, 
      freq = F, main = "", xlab = "", ylab = " ", 
@@ -113,15 +114,19 @@ axis(2, at = seq(0, 70, 10),
      lwd = 2, lwd.ticks = 2, line = -0.2)
 
 mtext(expression(paste("Difference", ~delta)), 
-      side = 1, line = 3, cex = 2.4, font = 2, adj = 0.5)
-mtext("Density", side = 2, line = 4, cex = 2.4, font = 2, las = 0)
+      side = 1, line = 3, las = 1, cex = 2, font = 2, adj = 0.5)
+mtext("Density", side = 2, line = 3, cex = 2, font = 2, las = 0)
 
 lines(density(delta), lwd = 4)
 
 HDI <- hdi(delta)
 arrows(x0 = HDI[1], y0 = 65, x1 = HDI[2], y1 = 65, angle = 90, 
        length = 0.1, code = 3, lwd = 2.2)
-text("95% HDI", x = mean(HDI), y = 70, cex = 1.8)
+
+upper <- round(HDI[1],3)
+lower <- round(HDI[2],3)
+text(0.05, 55, paste0("95% HDI: [", upper, ";", lower, "]"), cex = 1.5, pos = 2)
+text(0.05, 60, paste0("median = ", round(median(delta),3)), cex = 1.5, pos = 2)
 
 #-------------------------------------------------------------------------------
 #                                                               
@@ -131,8 +136,8 @@ text("95% HDI", x = mean(HDI), y = 70, cex = 1.8)
 
 ### Data Preprocessing
 
-data <- read.csv2("SimulatedWebshopData.csv") 
-conversion <- as.list(data)
+data <- read.csv2("SimulatedWebshopData2.csv") 
+conversion <- as.list(data[-1,])
 
 ### Analyze the results
 
@@ -170,6 +175,8 @@ names(plus.null) <- c("H1", "H+", "H-", "H0")
 AB.indifferent   <- ab_test(conversion, indifferent, prior_prob = plus.null) 
 AB.conservative  <- ab_test(conversion, conservative, prior_prob = plus.null) 
 AB.optimistic    <- ab_test(conversion, optimistic, prior_prob = plus.null) 
+
+AB   <- ab_test(conversion, prior_prob = plus.null) 
 
 # print results of ab_test
 print(AB.indifferent) 
@@ -217,8 +224,8 @@ CI.lower <- NULL
 for(i in seq(7, length(conversion$n1), 1)){
   ab1 <- ab_test(lapply(conversion, '[', 1:i), prior_prob = plus.null, posterior = T)
   # store values in two separate vectors
-  CI.lower <- c(CI.lower, hdi(AB.optimistic$post$Hplus$logor)[1])
-  CI.upper <- c(CI.upper, hdi(AB.optimistic$post$Hplus$logor)[2])
+  CI.lower <- c(CI.lower, hdi(ab1$post$Hplus$logor)[1])
+  CI.upper <- c(CI.upper, hdi(ab1$post$Hplus$logor)[2])
 }
 
 CI.df <- data.frame(CI.lower, CI.upper)
@@ -230,14 +237,14 @@ plot(1:length(conversion$n1), ylim = c(0,3),
      cex.lab = 1.3, cex.axis = 1.3, cex.main = 2, las = 1, pch = 21, lwd = 4,   
      bg = "grey")
 
-axis(1, at = seq(0, 140, by = 10), labels = seq(0, 140, 10))
+axis(1, at = seq(0, 20000, by = 1000), labels = seq(0, 20000, by = 1000))
 axis(2, at = seq(0, 3, 0.5), labels = seq(0, 3, 0.5))
 
 mtext("n", side = 1, line = 3, las = 1, cex = 2, font = 0.2, adj = 0.5)
 mtext("Width of CI", side = 2, line = 3, cex = 2, font = 2, las = 0)
 
 
-polygon(c(5:length(conversion$n1),length(conversion$n1):5), c(y.upper, rev(y.lower)), 
+polygon(c(7:length(conversion$n1),length(conversion$n1):7), c(y.upper, rev(y.lower)), 
         col = "lightgrey", border = NA)
 
 
