@@ -14,7 +14,7 @@
 #                                                               
 #-------------------------------------------------------------------------------
 
-# rm(list = ls())
+rm(list = ls())
 
 # packages needed
 library(dplyr)
@@ -23,15 +23,21 @@ library(hypergeo)
 library(tolerance)
 library(abtest)
 library(HDInterval)
+library(grDevices)
 
-y1 <- sample(c(rep(0, 65),rep(1, 35)))
-n1 <- length(y1)
-y2 <- sample(c(rep(0, 50),rep(1, 50)))
-n2 <- length(y1)
+### Data Fabrication  
+# y1 <- sample(c(rep(0, 65),rep(1, 35)))
+# n1 <- length(y1)
+# y2 <- sample(c(rep(0, 50),rep(1, 50)))
+# n2 <- length(y1)
+# 
+# A.successprob <- sum(y1)/max(n1)
+# B.successprob <- sum(y2)/max(n2)
+# 
+# data <- data.frame(y1, n1 = 1:n1, y2,n2 = 1:n2)
+# write.csv2(data, file = "example_data.csv")
 
-A.successprob <- sum(y1)/max(n1)
-B.successprob <- sum(y2)/max(n2)
-
+data <- read.csv2("example_data.csv")
 #-------------------------------------------------------------------------------
 #                                                               
 # 2. A/B test with R package 'bayesAB' (Portman, 2019)                 
@@ -39,14 +45,11 @@ B.successprob <- sum(y2)/max(n2)
 #-------------------------------------------------------------------------------
 
 # specify uniform prior for both success probabilities + fit bayesTest object
-AB1 <- bayesTest(y1, 
-                 y2, 
+AB1 <- bayesTest(data$y1, 
+                 data$y2, 
                  priors = c('alpha' = 1, 'beta' = 1), 
                  n_samples = 1e5, 
                  distribution = 'bernoulli')
-
-# check results
-summary(AB1) # A correpsonds to version B
 
 ## Visualize the results
 
@@ -66,8 +69,8 @@ dev.off()
 # than version B) 
 
 # first switch A and B 
-AB11 <- bayesTest(y2, 
-                  y1, 
+AB11 <- bayesTest(data$y2, 
+                  data$y1, 
                   priors = c('alpha' = 1, 'beta' = 1), 
                   n_samples = 1e5, 
                   distribution = 'bernoulli')
@@ -80,6 +83,9 @@ plot(AB11, priors = FALSE, posteriors = FALSE)
 dev.off()
 dev.off()
 
+# check results
+summary(AB11) # A correpsonds to version B
+
 
 #-------------------------------------------------------------------------------
 #                                                               
@@ -88,10 +94,10 @@ dev.off()
 #-------------------------------------------------------------------------------
 
 # get parameter of posterior distributions
-success.A  <- sum(y1)
-failures.A <- length(y1) - success.A
-success.B  <- sum(y2)
-failures.B <- length(y2) - success.B
+success.A  <- sum(data$y1)
+failures.A <- length(data$y1) - success.A
+success.B  <- sum(data$y2)
+failures.B <- length(data$y2) - success.B
 
 a1 <- 1 + success.A
 b1 <- 1 + failures.A
@@ -127,14 +133,14 @@ sigma2 <- sqrt((a2*b2)/((a2+b2)^2*(a2+b2+1)))
 mu.ges    <- mu2 - mu1
 sigma.ges <- sigma2 + sigma1
 
-
 delta <- rnorm(1000000, mu.ges, sigma.ges)
 
 # plot 
 png("example_approximation.png",  width = 18, height = 18, 
     units = "cm", res = 600, pointsize = 10)
-par(cex.main = 1.5, mar = c(5.5, 5.5, 5.9, 3) + 0.1, mgp = c(3.5, 1, 0), 
-    cex.lab = 1.5, font.lab = 2, cex.axis = 1.8, bty = "n", las = 1)
+
+par(cex.main = 1.5,  mar = c(5, 5, 3, 3) + 0.1, mgp = c(3.5, 1, 0), 
+    cex.lab = 1.5, font.lab = 2, cex.axis = 1.6, bty = "n", las = 1)
 
 hist(delta, 
      freq = F, main = "", xlab = "", ylab = " ", 
@@ -148,15 +154,19 @@ axis(2, at = seq(0, 6, 1),
      lwd = 2, lwd.ticks = 2, line = -0.2)
 
 mtext(expression(paste("Difference", ~delta)), 
-      side = 1, line = 3, cex = 2.4, font = 2, adj = 0.5)
-mtext("Density", side = 2, line = 4, cex = 2.4, font = 2, las = 0)
+      side = 1, line = 3, las = 1, cex = 2, font = 2, adj = 0.5)
+mtext("Density", side = 2, line = 2.5, cex = 2, font = 2, las = 0)
 
 lines(density(delta), lwd = 4)
 
 HDI <- hdi(delta)
 arrows(x0 = HDI[1], y0 = 4.5, x1 = HDI[2], y1 = 4.5, angle = 90, 
        length = 0.1, code = 3, lwd = 2.2)
-text("95% HDI", x = mean(HDI), y = 5, cex = 1.8)
+
+upper <- round(HDI[1],3)
+lower <- round(HDI[2],3)
+text(1, 5.5, paste0("95% HDI: [", upper, ";", lower, "]"), cex = 1.5, pos = 2)
+text(1, 6, paste0("median= ", round(median(delta),3)), cex = 1.5, pos = 2)
 
 dev.off()
 
@@ -166,8 +176,8 @@ dev.off()
 #                                                               
 #-------------------------------------------------------------------------------
 
-conversion <- list(y1 = cumsum(y1), y2 = cumsum(y2), 
-                   n1 = 1:length(y1), n2 = 1:length(y2))
+conversion <- list(y1 = cumsum(data$y1), y2 = cumsum(data$y2), 
+                   n1 = 1:length(data$y1), n2 = 1:length(data$y2))
 
 ## Hypothesis Testing
 
@@ -191,8 +201,7 @@ dev.off()
 
 # plot posterior probabilities of the hypotheses sequentially
 # 530 / 72 (width) by 400 / 72 (height); in pixels, 530 (width) by 400 (height).
-png("example_sequential.png", height = 530/72, width = 400/72, 
-    units = "in", res = 600)
+png("example_sequential.png", width = 530/72, height = 400/72, units = "in", res = 600)
 plot_sequential(AB2)
 dev.off()
 
@@ -230,16 +239,20 @@ png("example_sequentialCI.png",
     units = "cm", res = 600,
     pointsize = 10)
 
+par(cex.main = 1.5, mar = c(5, 5, 3, 3) + 0.1, mgp = c(3.5, 1, 0), 
+    cex.lab = 1.5, font.lab = 2, cex.axis = 1.6, bty = "n", las = 1)
+
 plot(1:length(conversion$n1), ylim = c(0,3), 
-     type = "n", xlab = "", ylab = "", yaxt = "n", bty = "n", axes = FALSE, 
-     cex.lab = 1.3, cex.axis = 1.3, cex.main = 2, las = 1, pch = 21, lwd = 4,   
+     type = "n", xlab = "", ylab = "", yaxt = "n", xaxt = "n", bty = "n", 
      bg = "grey")
 
-axis(1, at = seq(0, 100, by = 10), labels = seq(0, 100, 10))
-axis(2, at = seq(0, 3, 0.5), labels = seq(0, 3, 0.5))
+axis(1, at = seq(0, 100, by = 10), labels = seq(0, 100, 10), 
+     lwd = 2, lwd.ticks = 2, line = -0.1)
+axis(2, at = seq(0, 3, 0.5), labels = seq(0, 3, 0.5),
+     lwd = 2, lwd.ticks = 2, line = -0.2)
 
-mtext("n", side = 1, line = 3, las = 1, cex = 2, font = 0.2, adj = 0.5)
-mtext("Width of CI", side = 2, line = 2.5, cex = 2, font = 2, las = 0)
+mtext("n", side = 1, line = 3, las = 1, cex = 2, font = 2, adj = 0.5)
+mtext("Width of CI", side = 2, line = 3.25, cex = 2, font = 2, las = 0)
 
 polygon(c(1:length(conversion$n1),length(conversion$n1):1), c(y.upper, rev(y.lower)), 
         col = "lightgrey", border = NA)
