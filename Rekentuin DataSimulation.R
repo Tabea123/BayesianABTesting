@@ -5,7 +5,7 @@
 ################################################################################
 
 # input:  -
-# output: SimluatedRekentuinData2.csv
+# output: SimluatedRekentuinData.csv
 
 #-------------------------------------------------------------------------------
 #                                                               
@@ -14,8 +14,6 @@
 #-------------------------------------------------------------------------------
 
 rm(list = ls())
-
-setwd("C:/Users/Tabea Hoffmann/Documents/Master/Thesis/Preregistration/")
 
 library(truncnorm)
 
@@ -51,11 +49,12 @@ third_game  <- second_game + rtruncnorm(n = 100, a = 60, b = 240, mean = 120, sd
 # add a minimum of a day to some games
 x <- sample(user_id, 10)
 third_game[x] <- third_game[x] + 
-  rtruncnorm(n = length(x), a = 86400, b = 100800, 
-             mean = 86520, sd = 28800)
+                 rtruncnorm(n = length(x), a = 86400, b = 100800, 
+                            mean = 86520, sd = 28800)
 
 # sampling seconds to add for fourth game
-fourth_game <- third_game  + rtruncnorm(n = 100, a = 60, b = 240, mean = 120, sd = 30)
+fourth_game <- third_game  + 
+              rtruncnorm(n = 100, a = 60, b = 240, mean = 120, sd = 30)
 
 # combine all games
 all_games   <- cbind(first_game, second_game, third_game, fourth_game)
@@ -102,15 +101,17 @@ game_type <- ifelse(clicked_crown_game == 1, "crown", "non-crown")
 ## add time stamp; 0 = first game ever played, 90 = 90 secs later ##
 
 # sampling time of first game for each person in a range of 8 hours
-first_game  <- rtruncnorm(n = 100, a = 1, b = 28800, mean = 14400, sd = 3600)
+first_game <- rtruncnorm(n = 100, a = 1, b = 28800, mean = 14400, sd = 3600)
 
 # sampling seconds to add for second game from truncated normal distribution
 # mean is lower, sd higher in this group
-second_game <- first_game + rtruncnorm(n = 100, a = 30, b = 180, mean = 80, sd = 120)
+second_game <- first_game + 
+               rtruncnorm(n = 100, a = 30, b = 180, mean = 80, sd = 120)
 
 # sampling seconds to add for third game
-third_game  <- second_game + rtruncnorm(n = 100, a = 30, b = 180, mean = 80, sd = 60)
-# add a minimum of a day to some games
+third_game  <- second_game + 
+              rtruncnorm(n = 100, a = 30, b = 180, mean = 80, sd = 60)
+# additionally add a minimum of a day to some games
 x <- sample(1:100, 10)
 third_game[x] <- third_game[x] + 
   rtruncnorm(n = length(x), a = 86400, b = 100800, 
@@ -120,7 +121,7 @@ third_game[x] <- third_game[x] +
 fourth_game <- third_game  + rtruncnorm(n = 100, a = 30, b = 180, mean = 80, sd = 60)
 
 # combine all games
-all_games   <- cbind(first_game, second_game, third_game, fourth_game)
+all_games <- cbind(first_game, second_game, third_game, fourth_game)
 
 # all other games
 time <- NULL
@@ -139,7 +140,6 @@ delete <- sample(2:100, 30)
 B <- VersionB[-delete,]
 
 
-
 #-------------------------------------------------------------------------------
 #                                                               
 # 3. Create Dataframe With Both Versions
@@ -149,7 +149,6 @@ B <- VersionB[-delete,]
 ## merging of the two dataframes
 all.data <- rbind(A, B)
 
-
 #-------------------------------------------------------------------------------
 #                                                               
 # 4. Export Data
@@ -157,6 +156,5 @@ all.data <- rbind(A, B)
 #-------------------------------------------------------------------------------
 
 ## export data
-write.csv2(all.data, "SimluatedRekentuinData2.csv")
-
+write.csv2(all.data, "SimluatedRekentuinData.csv")
 
