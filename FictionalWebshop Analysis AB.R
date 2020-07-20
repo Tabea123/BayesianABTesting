@@ -18,10 +18,7 @@
 rm(list = ls())
 
 # packages needed
-library(dplyr)
 library(bayesAB)
-library(hypergeo)
-library(tolerance)
 library(abtest)
 library(HDInterval)
 
@@ -37,6 +34,10 @@ data <- read.csv2("SimulatedWebshopData1.csv")
 A_success <- ifelse(subset(data, version == "A")$successes == 1, 1, 0)
 B_success <- ifelse(subset(data, version == "B")$successes == 1, 1, 0)
 
+# success probabilities
+sum(A_success)/length(A_success)
+sum(B_success)/length(B_success)
+
 # specify uniform prior for both success probabilities + fit bayesTest object
 AB1 <- bayesTest(A_success, 
                  B_success, 
@@ -48,7 +49,9 @@ AB1 <- bayesTest(A_success,
 plot(AB1, posteriors = FALSE, samples = FALSE) 
 
 # posterior distributions,
+png("webshop_posterior.png", width = 18, height = 18, units = "cm", res = 600)
 plot(AB1, priors = FALSE, samples = FALSE)
+dev.off()
 
 # first switch A and B because of our hypothesis that B > A
 AB11 <- bayesTest(B_success, 
@@ -62,9 +65,17 @@ summary(AB11) # A correpsonds to version B
 
 # monte carlo 'integrated' samples (probability that version A is 
 # better than version B) 
+png("webshop_montecarlo.png", width = 18, height = 18, units = "cm", res = 600)
 plot(AB11, priors = FALSE, posteriors = FALSE)
+dev.off()
 
-## Analytically compute P(A > B)
+
+#-------------------------------------------------------------------------------
+#                                                               
+#                #### 2. Analytically Compute P(B > A) ####
+#       
+#-------------------------------------------------------------------------------
+
 # get parameter of posterior distributions
 success.A  <- sum(A_success)
 failures.A <- length(A_success) - success.A
@@ -80,11 +91,110 @@ b2 <- 1 + failures.B
 prob.ab(a1, b1, a2, b2)
 
 
-## Analytically compute P(B) - P(A)
-pdf.diff(a2, b2, a1, b1)
+#-------------------------------------------------------------------------------
+#                                                               
+#                #### 3. Comparison P(diff > 0)  ####
+#       
+#-------------------------------------------------------------------------------
 
 
-## alternatively normal approximation for large a1, b1, a2, b2
+## compare difference methods
+### Exact Difference
+a1 <- 1
+b1 <- 1
+a2 <- 1
+b2 <- 1
+
+delta.exact  <- numeric(length(A_success))
+for(i in 1:length(A_success)){
+  
+  a2 <- a2 + A_success[i]
+  b2 <- b2 + ifelse(A_success == 1, 0, 1)[i]
+  a1 <- a1 + B_success[i]
+  b1 <- b1 + ifelse(B_success == 1, 0, 1)[i]
+  
+  delta.exact[i] <- integrate(pdf.diff2, 0, 1, stop.on.error = F)$value
+}
+
+
+### Normal Approximation
+a1 <- 1
+b1 <- 1
+a2 <- 1
+b2 <- 1
+
+delta.approx <- numeric(length(A_success))
+for(i in 1:length(A_success)){
+  
+  a1 <- a1 + A_success[i]
+  b1 <- b1 + ifelse(A_success == 1, 0, 1)[i]
+  a2 <- a2 + B_success[i]
+  b2 <- b2 + ifelse(B_success == 1, 0, 1)[i]
+  
+  mu1       <- a1/(a1+b1)
+  sigma1    <- sqrt((a1*b1)/((a1+b1)^2*(a1+b1+1)))
+  mu2       <- a2/(a2+b2)
+  sigma2    <- sqrt((a2*b2)/((a2+b2)^2*(a2+b2+1)))
+  mu.ges    <- mu2 - mu1
+  sigma.ges <- sigma1 + sigma2
+  
+  norm.approx <- function(x){dnorm(x, mean = mu.ges, sd = sigma.ges)}
+  delta.approx[i] <- integrate(norm.approx, 0, 1)$value
+  print(paste("I'm on it!", i))
+}
+
+
+#### H+ vs H-
+posprob_Hplus <- numeric(length(A_success))
+
+for(i in 1:length(A_success)){
+  conversion <- list(y1 = cumsum(A_success)[1:i], y2 = cumsum(B_success)[1:i], 
+                     n1 = 1:length(A_success[1:i]), n2 = 1:length(B_success[1:i]))
+  
+  
+  plus.minus <- c(0, 1/2, 1/2, 0) # H+ vs H0
+  names(plus.minus) <- c("H1", "H+", "H-", "H0")
+  
+  AB2 <- ab_test(conversion, prior_prob = plus.minus)  # uses default normal prior
+  posprob_Hplus[i] <- AB2$post_prob[2]
+  print(paste("I'm on it!", i))
+}
+
+png("webshop_sequentialdiff.png", width = 18, height = 18, units = "cm", res = 600)
+
+par(cex.main = 1.5, mar = c(5, 5, 3, 3) + 0.1, mgp = c(3.5, 1, 0), 
+    cex.lab = 2, font.lab = 2, cex.axis = 1.2, bty = "n", las = 1)
+
+plot(delta.approx, type = "l", ylim = c(0, 1), xlim = c(0, 10000),
+     bty = "n", xlab = "", ylab = "", axes = F, las = 1, col = "lightblue", 
+     lwd = 2, cex.lab = 1.5, cex.axis = 1.8, cex.main = 1.5)
+
+axis(1, at = seq(0, 10000, 500), labels = seq(0, 10000, 500), 
+     lwd = 2, lwd.ticks = 2, line = -0.1)
+axis(2, at = seq(0, 1, 0.1), lwd = 2, lwd.ticks = 2, line = -0.2)
+
+mtext(expression(paste("P(", ~delta, " > 0)")), side = 2, 
+      line = 3, las = 0, cex = 2, font = 0.2, adj = 0.5)
+mtext("n", side = 1, line = 2.5, cex = 2, font = 2, las = 1)
+
+lines(delta.exact, lty = 2, lwd = 2, col = "pink")
+lines(posprob_Hplus, lwd = 2, col = "orange")
+
+legend(5500, 0.5, lty = c(1, 2, 1), bty = "n",
+       legend = c("Normal Approximation","Exact Difference", 
+                  "Posterior Probability H+"), 
+       col = c("lightblue", "pink", "orange"))
+
+dev.off()
+
+
+## normal approximation of difference
+
+a1 <- 1 + success.A
+b1 <- 1 + failures.A
+a2 <- 1 + success.B
+b2 <- 1 + failures.B
+
 # normal approximation of beta 1
 mu1    <- a1/(a1+b1)
 sigma1 <- sqrt((a1*b1)/((a1+b1)^2*(a1+b1+1)))
@@ -99,18 +209,20 @@ sigma.ges <- sigma2 + sigma1
 # plot 
 delta <- rnorm(1000000, mu.ges, sigma.ges)
 
+png("webshop_approximation.png", width = 18, height = 18, units = "cm", res = 600)
+
 par(cex.main = 1.5,  mar = c(5, 5, 3, 3) + 0.1, mgp = c(3.5, 1, 0), 
     cex.lab = 1.5, font.lab = 2, cex.axis = 1.6, bty = "n", las = 1)
 
 hist(delta, 
      freq = F, main = "", xlab = "", ylab = " ", 
-     xlim = c(0, 0.05), ylim = c(0, 70),
+     xlim = c(-0.05, 0.05), ylim = c(0, 100),
      axes = FALSE, breaks = 17, yaxt = "n", xaxt = "n", col = "grey")
 
-axis(1, at = c(0, 0.01, 0.02, 0.03, 0.04, 0.05), 
-     labels = c(0, 0.01, 0.02, 0.03, 0.04, 0.05), 
+axis(1, at = seq(-0.05, 0.05, 0.01), 
+     labels = seq(-0.05, 0.05, 0.01), 
      lwd = 2, lwd.ticks = 2, line = -0.1)
-axis(2, at = seq(0, 70, 10),  
+axis(2, at = seq(0, 100, 20),  
      lwd = 2, lwd.ticks = 2, line = -0.2)
 
 mtext(expression(paste("Difference", ~delta)), 
@@ -125,12 +237,15 @@ arrows(x0 = HDI[1], y0 = 65, x1 = HDI[2], y1 = 65, angle = 90,
 
 upper <- round(HDI[1],3)
 lower <- round(HDI[2],3)
-text(0.05, 55, paste0("95% HDI: [", upper, ";", lower, "]"), cex = 1.5, pos = 2)
-text(0.05, 60, paste0("median = ", round(median(delta),3)), cex = 1.5, pos = 2)
+text(0.05, 85, paste0("95% HDI: [", upper, ";", lower, "]"), cex = 1.5, pos = 2)
+text(0.05, 95, paste0("median = ", round(median(delta),3)),  cex = 1.5, pos = 2)
+
+dev.off()
+
 
 #-------------------------------------------------------------------------------
 #                                                               
-#   #### 2. A/B test with R package 'abtest' (Gronau & Wagenmakers, 2019) ####
+#   #### 4. A/B test with R package 'abtest' (Gronau & Wagenmakers, 2019) ####
 #                                                               
 #-------------------------------------------------------------------------------
 
@@ -156,12 +271,15 @@ optimistic <- elicit_prior(q = c(0.13, 0.18, 0.23), prob = c(.025, .5, .975),
                            what = "logor")
 
 # plot three priors for log odds ratio
-# png("priors.png", width = 500, height = 600)
-# par(mfrow = c(3, 1))
-# plot_prior_mod(indifferent, what = "logor", hypothesis = "H+", main = "Indifferent") # truncated normal
-# plot_prior_mod(conservative, what = "logor", hypothesis = "H+", main = "Conservative")
-# plot_prior_mod(optimistic, what = "logor", hypothesis = "H+", main = "Optimistic")
-# dev.off()
+png("webshop_prior1.png", width = 18, height = 18, units = "cm", res = 600)
+plot_prior(indifferent, what = "logor", hypothesis = "H+") # truncated normal
+dev.off()
+png("webshop_prior2.png", width = 18, height = 18, units = "cm", res = 600)
+plot_prior(conservative, what = "logor", hypothesis = "H+")
+dev.off()
+png("webshop_prior3.png", width = 18, height = 18, units = "cm", res = 600)
+plot_prior(optimistic, what = "logor", hypothesis = "H+")
+dev.off()
 
 ## Hypothesis Testing
 
@@ -244,7 +362,7 @@ mtext("n", side = 1, line = 3, las = 1, cex = 2, font = 0.2, adj = 0.5)
 mtext("Width of CI", side = 2, line = 3, cex = 2, font = 2, las = 0)
 
 
-polygon(c(7:length(conversion$n1),length(conversion$n1):7), c(y.upper, rev(y.lower)), 
+polygon(c(7:length(conversion$n1), length(conversion$n1):7), c(y.upper, rev(y.lower)), 
         col = "lightgrey", border = NA)
 
 
