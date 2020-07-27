@@ -26,6 +26,11 @@ library(HDInterval)
 # load simulated data
 data <- read.csv2("SimluatedRekentuinData.csv")
 
+# load preprocessed data 
+data4 <- read.csv2("Rekentuin_ABTestData.csv") 
+conversion <- as.list(data4)
+
+
 #-------------------------------------------------------------------------------
 #                                                               
 #             #### 1. Exclude Players + Select Last Game  ####
@@ -74,7 +79,7 @@ AB1 <- bayesTest(A_success_ncrown,
                  distribution = 'bernoulli')
 
 # plot prior distribution
-plot(AB1, posteriors = FALSE, samples = FALSE) # A correpsonds to version B
+plot(AB1, posteriors = FALSE, samples = FALSE) 
 
 # posterior distributions,
 plot(AB1, priors = FALSE, samples = FALSE)
@@ -89,8 +94,7 @@ AB11 <- bayesTest(B_success_ncrown,
 # check results
 summary(AB1) # A correpsonds to version B
 
-# and monte carlo 'integrated' samples (probability that version A is better
-# than version B) 
+# probability that version A is better than version B
 plot(AB11, priors = FALSE, posteriors = FALSE)
 
 
@@ -117,13 +121,14 @@ prob.ab(a1, b1, a2, b2)
 
 #-------------------------------------------------------------------------------
 #                                                               
-#                 #### 4. Analytically Compute P(B) - P(A) ####
+#                 #### 4. Compute P(B) - P(A) ####
 #                                                               
 #-------------------------------------------------------------------------------
 
+### exact computation
 pdf.diff(a2, b2, a1, b1)
 
-## alternatively normal approximation for large a1, b1, a2, b2
+### alternatively normal approximation for large a1, b1, a2, b2
 # normal approximation of beta 1
 mu1    <- a1/(a1+b1)
 sigma1 <- sqrt((a1*b1)/((a1+b1)^2*(a1+b1+1)))
@@ -163,16 +168,32 @@ arrows(x0 = HDI[1], y0 = 4, x1 = HDI[2], y1 = 4, angle = 90,
 text("95% HDI", x = mean(HDI), y = 4.5, cex = 1.8)
 
 
+### alternatively compute posterior probability of absolute risk
+plus.minus <- c(0, 1/2, 1/2, 0) # H+ vs H0
+names(plus.minus) <- c("H1", "H+", "H-", "H0")
+AB2 <- ab_test(conversion, prior_prob = plus.minus, 
+               posterior = T, nsamples = 1000000)
+
+par(cex.main = 1.5,  mar = c(5, 5, 3, 3) + 0.1, mgp = c(3.5, 1, 0), 
+    cex.lab = 1.5, font.lab = 2, cex.axis = 1.6, bty = "n", las = 1)
+
+plot(density(AB2$post$Hplus$arisk), type = "n", main = "", bty = "n",
+     yaxt = "n", xaxt = "n", axes = F, xlim = c(-1, 1), ylim = c(0, 6))
+
+lines(density(AB2$post$Hplus$arisk), lwd = 2)
+
+axis(1, at = seq(-1, 1, 0.25), 
+     labels = seq(-1, 1, 0.25), 
+     lwd = 2, lwd.ticks = 2, line = -0.1)
+axis(2, at = seq(0, 6, 1),  
+     lwd = 2, lwd.ticks = 2, line = -0.2)
+
+
 #-------------------------------------------------------------------------------
 #                                                               
 #   #### 5. A/B test with R package 'abtest' (Gronau & Wagenmakers, 2019) ####
 #                                                               
 #-------------------------------------------------------------------------------
-
-## Load Preprocessed Data 
-
-data4 <- read.csv2("Rekentuin_ABTestData.csv") 
-conversion <- as.list(data4)
 
 # success probabilities
 tail(conversion$y1,1)/tail(conversion$n1, 1)
@@ -184,52 +205,79 @@ tail(conversion$y2,1)/tail(conversion$n2, 1)
 # prior model probabilities: H+ = 0.5; H0 = 0.5
 plus.null <- c(0, 1/2, 0, 1/2) # H+ vs H0
 names(plus.null) <- c("H1", "H+", "H-", "H0")
-AB2 <- ab_test(conversion, prior_prob = plus.null)  # uses default normal prior
+AB3 <- ab_test(conversion, prior_prob = plus.null)  # uses default normal prior
 
 # print results of ab_test
-print(AB2) 
+print(AB3) 
 
 # visualize prior and posterior probabilities of the hypotheses 
 # as probability wheels
-prob_wheel(AB2)
+prob_wheel(AB3)
 
 # plot posterior probabilities of the hypotheses sequentially
-plot_sequential(AB2)
+plot_sequential(AB3)
 
 
 ## Parameter Estimation
 
 # plot posterior distribution of log odds ratio
-plot_posterior(AB2, what = "logor")
+plot_posterior(AB3, what = "logor")
 
+#-------------------------------------------------------------------------------
+#                                                               
+# #### 7. Sequential Analysis of Delta
+#                                                               
+#-------------------------------------------------------------------------------
 
-# sequential analysis of CI 
-CI.upper <- NULL
-CI.lower <- NULL
+seq_posprob <- numeric(length(data4$y1))
+CI.upper    <- numeric(length(data4$y1))
+CI.lower    <- numeric(length(data4$y1))
+mean.ar     <- numeric(length(data4$y1))
 
-# monitor CI in tranches of 10 data points
-for(i in seq(5, length(conversion$n1), 1)){
-  ab1 <- ab_test(lapply(conversion, '[', 1:i), prior_prob = plus.null, posterior = T)
-  # store values in two separate vectors
-  CI.lower <- c(CI.lower, hdi(ab1$post$Hplus$logor)[1])
-  CI.upper <- c(CI.upper, hdi(ab1$post$Hplus$logor)[2])
+for(i in 1:length(data4$y1)){
+
+  plus.minus <- c(0, 1/2, 1/2, 0) # H+ vs H0
+  names(plus.minus) <- c("H1", "H+", "H-", "H0")
+  
+  AB4 <- ab_test(conversion, prior_prob = plus.minus)  # uses default normal prior
+  seq_posprob[i] <- AB4$post_prob[2]
+  
+  AB5 <- ab_test(conversion, prior_prob = plus.minus, 
+                 posterior = T, nsamples = 10000)
+  CI.upper[i] <- as.numeric(hdi(AB5$post$H1$arisk)[1])
+  CI.lower[i] <- as.numeric(hdi(AB5$post$H1$arisk)[2])
+  
+  mean.ar[i] <- mean(AB5$post$H1$arisk)
+  
+  print(paste("Can I have", i, "scoops of ice cream?"))
 }
 
-CI.df <- data.frame(CI.lower, CI.upper)
-y.upper <- CI.df[,1]
-y.lower <- CI.df[,2]
 
-plot(1:length(conversion$n1), ylim = c(0,3), 
-     type = "n", xlab = "", ylab = "", yaxt = "n", bty = "n", axes = FALSE, 
-     cex.lab = 1.3, cex.axis = 1.3, cex.main = 2, las = 1, pch = 21, lwd = 4,   
+# plot
+png("example_sequentialdiff.png", 
+    width = 18, height = 18,
+    units = "cm", res = 600,
+    pointsize = 10)
+
+par(cex.main = 1.5, mar = c(5, 5, 3, 3) + 0.1, mgp = c(3.5, 1, 0), 
+    cex.lab = 1.5, font.lab = 2, cex.axis = 1.6, bty = "n", las = 1)
+
+plot(1:length(conversion$n1), ylim = c(-1, 1), 
+     type = "n", xlab = "", ylab = "", yaxt = "n", xaxt = "n", bty = "n", 
      bg = "grey")
 
-axis(1, at = seq(0, 140, by = 10), labels = seq(0, 140, 10))
-axis(2, at = seq(0, 3, 0.5), labels = seq(0, 3, 0.5))
+axis(1, at = seq(0, length(conversion$n1), by = 10), labels = seq(0, length(conversion$n1), 10), 
+     lwd = 2, lwd.ticks = 2, line = -0.1)
+axis(2, at = seq(-1, 1, 0.2), labels = seq(-1, 1, 0.2),
+     lwd = 2, lwd.ticks = 2, line = -0.2)
 
-mtext("n", side = 1, line = 3, las = 1, cex = 2, font = 0.2, adj = 0.5)
-mtext("Width of CI", side = 2, line = 3, cex = 2, font = 2, las = 0)
+mtext("n", side = 1, line = 3, las = 1, cex = 2, font = 2, adj = 0.5)
+mtext(expression(paste("Difference", ~delta)), side = 2, line = 3.25, cex = 2, font = 2, las = 0)
 
-
-polygon(c(5:length(conversion$n1),length(conversion$n1):5), c(y.upper, rev(y.lower)), 
+polygon(c(1:length(conversion$n1),length(conversion$n1):1), c(CI.upper, rev(CI.lower)), 
         col = "lightgrey", border = NA)
+
+lines(mean.ar, lwd = 2, col = "orange")
+abline(h = 0, lwd = 2, col = "darkgrey", lty = 2)
+
+dev.off()
