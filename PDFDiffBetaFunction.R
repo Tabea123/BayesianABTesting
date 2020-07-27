@@ -33,8 +33,8 @@ pdf.diff <- function(a1, b1, a2, b2){
          type = "l", bty = "n", lwd = 2, xlab = "", ylab = "", axes = F,
          cex.lab = 1.5, cex.axis = 1.8, cex.main = 1.5, las = 1, bg = "grey")
     
-    axis(1, at = c(-1.00, -0.75, -0.50, -0.25,  0.00,  0.25,  0.50,  0.75,  1.00), 
-         labels = c(-1.00, -0.75, -0.50, -0.25,  0.00,  0.25,  0.50,  0.75,  1.00), 
+    axis(1, at = seq(-1, 1, 0.25), 
+         labels = seq(-1, 1, 0.25), 
          lwd = 2, lwd.ticks = 2, line = -0.1)
     axis(2, at = seq(0, 6, 1),  
          lwd = 2, lwd.ticks = 2, line = -0.2)
@@ -66,3 +66,28 @@ pdf.diff <- function(a1, b1, a2, b2){
   return(list(plot.smaller1, plot.smaller0, point.zero))
 }
 
+
+
+# combined function for exact difference
+pdf.diff2 <- function(p){
+  
+  results <- numeric(length(p))
+  
+  logA <- lbeta(a1, b1) + lbeta(a2, b2)
+  
+  for(i in 1:length(p)){
+    if(p[i] > 0 && p[i] <= 1){
+      results[i] <- (exp(lbeta(a2, b1) + (b1+b2-1)*log(p[i]) + 
+                           (a2+b1-1)*log(1-p[i]) + log(appell.F1(b1, a1+b1+a2+b2-2, 1-a1, b1+a2, 
+                                                                 (1-p[i]), (1-p[i]^2))) - logA))
+    } else if(p[i] <= -1 && p[i] < 0){
+      results[i] <- (exp(lbeta(a1, b2) + (b1+b2-1)*log(-p[i]) + (a1+b2-1)*log(1+p[i]) +
+                           log(appell.F1(b2, 1-a2, a1+a2+b1+b2-2, a1+b2, (1-p[i]^2), (1+p[i]))) - logA))
+    } else {
+      results[i] <- (exp(lbeta(a1+a2-1, b1 + b2 -1) - logA))
+    }
+  }
+  
+  return(results)
+  
+}
