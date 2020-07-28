@@ -188,7 +188,7 @@ legend(5500, 0.5, lty = c(1, 2, 1), bty = "n",
 dev.off()
 
 
-## normal approximation of difference
+## normal approximation of difference distribution
 
 a1 <- 1 + success.A
 b1 <- 1 + failures.A
@@ -214,10 +214,10 @@ png("webshop_approximation.png", width = 18, height = 18, units = "cm", res = 60
 par(cex.main = 1.5,  mar = c(5, 5, 3, 3) + 0.1, mgp = c(3.5, 1, 0), 
     cex.lab = 1.5, font.lab = 2, cex.axis = 1.6, bty = "n", las = 1)
 
-hist(delta, 
-     freq = F, main = "", xlab = "", ylab = " ", 
+plot(density(delta), lwd = 4,
+     main = "", xlab = "", ylab = " ",  
      xlim = c(-0.05, 0.05), ylim = c(0, 100),
-     axes = FALSE, breaks = 17, yaxt = "n", xaxt = "n", col = "grey")
+     axes = FALSE, yaxt = "n", xaxt = "n")
 
 axis(1, at = seq(-0.05, 0.05, 0.01), 
      labels = seq(-0.05, 0.05, 0.01), 
@@ -298,13 +298,16 @@ AB   <- ab_test(conversion, prior_prob = plus.null)
 
 # print results of ab_test
 print(AB.indifferent) 
+round(AB.indifferent$bf$bfplus0,3)
 print(AB.conservative)
+round(AB.conservative$bf$bfplus0,3)
 print(AB.optimistic)
+round(AB.optimistic$bf$bfplus0,3)
 
 # visualize prior and posterior probabilities of the hypotheses 
 # as probability wheels
-png("probwheel.png", width = 600, height = 600)
-par(mfrow = c(3, 2), cex.main = 1.5, mar = c(0.25, 1, 1.5, 1)) 
+png("webshop_probwheel.png", width = 20, height = 18, units = "cm", res = 600)
+par(mfrow = c(3, 2), cex.main = 1.5, mar = c(0.25, 0.5, 1.5, 2)+0.5) 
 prob_wheel(AB.indifferent, type = "prior")
 title("Prior Probabilities")
 prob_wheel(AB.indifferent)

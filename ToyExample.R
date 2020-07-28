@@ -44,6 +44,8 @@ data <- read.csv2("example_data.csv")
 conversion <- list(y1 = cumsum(data$y1), y2 = cumsum(data$y2), 
                    n1 = 1:length(data$y1), n2 = 1:length(data$y2))
 
+# write.csv2(conversion, file = "example_conversion.csv")
+
 #-------------------------------------------------------------------------------
 #                                                               
 # 2. A/B test with R package 'bayesAB' (Portman, 2019)                 
@@ -60,7 +62,13 @@ AB1 <- bayesTest(data$y1,
 ## Visualize the results
 
 # plot prior distribution
+png("example_prior.png",
+    width = 18, height = 18,
+    units = "cm", res = 600,
+    pointsize = 10)
 plot(AB1, posteriors = FALSE, samples = FALSE) 
+dev.off()
+dev.off()
 
 # plot posterior distributions,
 png("example_posterior.png",
@@ -149,10 +157,10 @@ png("example_approximation.png",  width = 18, height = 18,
 par(cex.main = 1.5,  mar = c(5, 5, 3, 3) + 0.1, mgp = c(3.5, 1, 0), 
     cex.lab = 1.5, font.lab = 2, cex.axis = 1.6, bty = "n", las = 1)
 
-hist(delta, 
-     freq = F, main = "", xlab = "", ylab = " ", 
-     xlim = c(-1, 1), ylim = c(0, 6),
-     axes = FALSE, breaks = 17, yaxt = "n", xaxt = "n", col = "grey")
+
+plot(density(delta), lwd = 4,
+      main = "", xlab = "", ylab = " ", xlim = c(-1, 1), ylim = c(0, 6),
+      axes = FALSE, yaxt = "n", xaxt = "n")
 
 axis(1, at = c(-1, -0.75, -0.50, -0.25, 0, 0.25, 0.50, 0.75, 1), 
      labels = c(-1, -0.75, -0.50, -0.25, 0, 0.25, 0.50, 0.75, 1),
@@ -163,8 +171,6 @@ axis(2, at = seq(0, 6, 1),
 mtext(expression(paste("Difference", ~delta)), 
       side = 1, line = 3, las = 1, cex = 2, font = 2, adj = 0.5)
 mtext("Density", side = 2, line = 2.5, cex = 2, font = 2, las = 0)
-
-lines(density(delta), lwd = 4)
 
 HDI <- hdi(delta)
 arrows(x0 = HDI[1], y0 = 4.5, x1 = HDI[2], y1 = 4.5, angle = 90, 
@@ -177,7 +183,7 @@ text(1, 6, paste0("median= ", round(median(delta),3)), cex = 1.5, pos = 2)
 
 dev.off()
 
-## alternatively compute posterior probability of H+
+## alternatively compute posterior probability of absolute risk
 plus.minus <- c(0, 1/2, 1/2, 0) # H+ vs H0
 names(plus.minus) <- c("H1", "H+", "H-", "H0")
 AB2 <- ab_test(conversion, prior_prob = plus.minus, 
@@ -232,6 +238,14 @@ dev.off()
 # 530 / 72 (width) by 400 / 72 (height); in pixels, 530 (width) by 400 (height).
 cairo_pdf("example_sequential.pdf", width = 530/72, height = 400/72)
 plot_sequential(AB3)
+dev.off()
+
+# plot BF robustness plot
+png("example_robustness.png", 
+    width = 18, height = 18,
+    units = "cm", res = 600,
+    pointsize = 10)
+plot_robustness(AB3)
 dev.off()
 
 ## Parameter Estimation
