@@ -25,26 +25,12 @@ library(abtest)
 library(HDInterval)
 library(grDevices)
 
-# ### Data Fabrication
-# y1 <- sample(c(rep(0, 65),rep(1, 35)))
-# n1 <- length(y1)
-# y2 <- sample(c(rep(0, 50),rep(1, 50)))
-# n2 <- length(y1)
-# 
-# A.successprob <- sum(y1)/max(n1)
-# B.successprob <- sum(y2)/max(n2)
-# 
-# data <- data.frame(y1, n1 = 1:n1, y2,n2 = 1:n2)
-# write.csv2(data, file = "example_data.csv")
-
 # read in data
-data <- read.csv2("example_data.csv")
+data <- read.csv2("example_data1.csv")
 
 # greate list of data for later calculations
-conversion <- list(y1 = cumsum(data$y1), y2 = cumsum(data$y2), 
-                   n1 = 1:length(data$y1), n2 = 1:length(data$y2))
+conversion <- as.list(read.csv2("example_data2.csv")[,-1])
 
-# write.csv2(conversion, file = "example_conversion.csv")
 
 #-------------------------------------------------------------------------------
 #                                                               
@@ -68,7 +54,7 @@ png("example_prior.png",
     pointsize = 10)
 plot(AB1, posteriors = FALSE, samples = FALSE) 
 dev.off()
-dev.off()
+
 
 # plot posterior distributions,
 png("example_posterior.png",
@@ -76,7 +62,6 @@ png("example_posterior.png",
     units = "cm", res = 600,
     pointsize = 10)
 plot(AB1, priors = FALSE, samples = FALSE)
-dev.off()
 dev.off()
 
 
@@ -96,7 +81,7 @@ png("example_montecarlo.png",
 par(mar=c(5, 5, 5, 5) + 0.5)
 plot(AB11, priors = FALSE, posteriors = FALSE)
 dev.off()
-dev.off()
+
 
 # check results
 summary(AB11) # A correpsonds to version B
@@ -192,17 +177,17 @@ AB2 <- ab_test(conversion, prior_prob = plus.minus,
 png("example_hpluspost.png", width = 18, height = 18, units = "cm", res = 600)
 
 par(cex.main = 1.5,  mar = c(5, 5, 3, 3) + 0.1, mgp = c(3.5, 1, 0), 
-    cex.lab = 1.5, font.lab = 2, cex.axis = 1.6, bty = "n", las = 1)
+    cex.lab = 1.5, font.lab = 2, cex.axis = 1.3, bty = "n", las = 1)
 
 plot(density(AB2$post$Hplus$arisk), type = "n", main = "", bty = "n",
-     yaxt = "n", xaxt = "n", axes = F, xlim = c(-1, 1), ylim = c(0, 6))
+     yaxt = "n", xaxt = "n", axes = F, xlim = c(-1, 1), ylim = c(0, 7))
 
 lines(density(AB2$post$Hplus$arisk), lwd = 2)
 
 axis(1, at = seq(-1, 1, 0.25), 
      labels = seq(-1, 1, 0.25), 
      lwd = 2, lwd.ticks = 2, line = -0.1)
-axis(2, at = seq(0, 6, 1),  
+axis(2, at = seq(0, 7, 1),  
      lwd = 2, lwd.ticks = 2, line = -0.2)
 
 dev.off()
@@ -245,7 +230,7 @@ png("example_robustness.png",
     width = 18, height = 18,
     units = "cm", res = 600,
     pointsize = 10)
-plot_robustness(AB3)
+plot_robustness(AB3, mu_range = c(0, 2), sigma_range = c(0.1, 1))
 dev.off()
 
 ## Parameter Estimation
@@ -255,7 +240,7 @@ png("example_priorposterior.png",
     width = 18, height = 18,
     units = "cm", res = 600,
     pointsize = 10)
-plot_posterior(AB3, what = "logor")
+plot_posterior(AB3, what = "logor", hypothesis = "H+")
 dev.off()
 
 plot_posterior(AB3, what = "p1p2")
@@ -267,130 +252,34 @@ plot_posterior(AB3, what = "p1p2")
 #                                                               
 #-------------------------------------------------------------------------------
 
-### Increase N to 200
-y1 <- sample(c(rep(0, 130),rep(1, 70)))
-n1 <- length(y1)
-y2 <- sample(c(rep(0, 100),rep(1, 100)))
-n2 <- length(y1)
-
-data2 <- data.frame(y1, n1 = 1:n1, y2,n2 = 1:n2)
-
-### Exact Difference
-a1 <- 1
-b1 <- 1
-a2 <- 1
-b2 <- 1
-
-delta.exact  <- numeric(length(data2$y1))
-for(i in 1:length(data2$y1)){
-  
-  a2 <- a2 + data2$y1[i]
-  b2 <- b2 + ifelse(data2$y1 == 1, 0, 1)[i]
-  a1 <- a1 + data2$y2[i]
-  b1 <- b1 + ifelse(data2$y2 == 1, 0, 1)[i]
-  
-  delta.exact[i] <- integrate(pdf.diff2, 0, 1, stop.on.error = F)$value
-}
-
-
-### Normal Approximation
-a1 <- 1
-b1 <- 1
-a2 <- 1
-b2 <- 1
-
-delta.approx <- numeric(length(data2$y1))
-for(i in 1:length(data2$y1)){
-  
-  a1 <- a1 + data2$y1[i]
-  b1 <- b1 + ifelse(data2$y1 == 1, 0, 1)[i]
-  a2 <- a2 + data2$y2[i]
-  b2 <- b2 + ifelse(data2$y2 == 1, 0, 1)[i]
-  
-  mu1       <- a1/(a1+b1)
-  sigma1    <- sqrt((a1*b1)/((a1+b1)^2*(a1+b1+1)))
-  mu2       <- a2/(a2+b2)
-  sigma2    <- sqrt((a2*b2)/((a2+b2)^2*(a2+b2+1)))
-  mu.ges    <- mu2 - mu1
-  sigma.ges <- sigma1 + sigma2
-  
-  norm.approx <- function(x){dnorm(x, mean = mu.ges, sd = sigma.ges)}
-  delta.approx[i] <- integrate(norm.approx, 0, 1)$value
-}
-
-
-#### Posterior Probability of H+
-posprob_Hplus <- numeric(length(data2$y1))
-
-for(i in 1:length(data2$y1)){
-  conversion <- list(y1 = cumsum(data2$y1)[1:i], y2 = cumsum(data2$y2)[1:i], 
-                     n1 = 1:length(data2$y1[1:i]), n2 = 1:length(data2$y2[1:i]))
-  
-  
-  plus.minus <- c(0, 1/2, 1/2, 0) # H+ vs H0
-  names(plus.minus) <- c("H1", "H+", "H-", "H0")
-  
-  AB4 <- ab_test(conversion, prior_prob = plus.minus)  # uses default normal prior
-  posprob_Hplus[i] <- AB4$post_prob[2]
-}
-
-
-### Plot the three options
-png("example_pdeltazero.png", width = 18, height = 18, units = "cm", res = 600)
-
-par(cex.main = 1.5, mar = c(5, 5, 3, 3) + 0.1, mgp = c(3.5, 1, 0), 
-    cex.lab = 2, font.lab = 2, cex.axis = 1.2, bty = "n", las = 1)
-
-plot(delta.approx, type = "l", ylim = c(0, 1), xlim = c(0, 200),
-     bty = "n", xlab = "", ylab = "", axes = F, las = 1, col = "lightblue", 
-     lwd = 2, cex.lab = 1.5, cex.axis = 1.8, cex.main = 1.5)
-
-axis(1, at = seq(0, 200, 20), labels = seq(0, 200, 20), 
-     lwd = 2, lwd.ticks = 2, line = -0.1)
-axis(2, at = seq(0, 1, 0.1), lwd = 2, lwd.ticks = 2, line = -0.2)
-
-mtext(expression(paste("P(", ~delta, " > 0)")), side = 2, 
-      line = 3, las = 0, cex = 2, font = 0.2, adj = 0.5)
-mtext("n", side = 1, line = 2.5, cex = 2, font = 2, las = 1)
-
-lines(delta.exact, lty = 2, lwd = 2, col = "pink")
-lines(posprob_Hplus, lty = 3, lwd = 2, col = "orange")
-
-
-legend(110, 0.2, lty = c(1, 2, 3), bty = "n",
-       legend = c("Normal Approximation","Exact Difference", 
-                  "Posterior Probability H+"), 
-       col = c("lightblue", "pink", "orange"))
-
-dev.off()
-
+# s. ProbDelta.R
 
 #-------------------------------------------------------------------------------
 #                                                               
 # #### 7. Sequential Analysis of Delta
 #                                                               
 #-------------------------------------------------------------------------------
+library(dplyr)
 
-seq_posprob <- numeric(length(data$y1))
+seq_posprob <- numeric(length(conversion$n1))
 
-CI.upper <- numeric(length(data$y1))
-CI.lower <- numeric(length(data$y1))
+CI.upper <- numeric(length(conversion$n1))
+CI.lower <- numeric(length(conversion$n1))
 
-mean.ar <- numeric(length(data$y1))
+mean.ar <- numeric(length(conversion$n1))
 
-for(i in 1:length(data$y1)){
-  conversion <- list(y1 = cumsum(data$y1)[1:i], y2 = cumsum(data$y2)[1:i], 
-                     n1 = 1:length(data$y1[1:i]), n2 = 1:length(data$y2[1:i]))
+for(i in 3:length(conversion$n1)){
   
+  conversion1 <- as.list(as.data.frame(conversion)[3:i,])
   
   plus.minus <- c(0, 1/2, 1/2, 0) # H+ vs H0
   names(plus.minus) <- c("H1", "H+", "H-", "H0")
   
-  AB4 <- ab_test(conversion, prior_prob = plus.minus)  # uses default normal prior
+  AB4 <- ab_test(conversion1, prior_prob = plus.minus)  # uses default normal prior
   seq_posprob[i] <- AB4$post_prob[2]
   
-  AB5 <- ab_test(conversion, prior_prob = plus.minus, 
-                posterior = T, nsamples = 10000)
+  AB5 <- ab_test(conversion1, prior_prob = plus.minus, 
+                 posterior = T, nsamples = 10000)
   CI.upper[i] <- as.numeric(hdi(AB5$post$H1$arisk)[1])
   CI.lower[i] <- as.numeric(hdi(AB5$post$H1$arisk)[2])
   
@@ -399,7 +288,6 @@ for(i in 1:length(data$y1)){
   print(paste("Can I have", i, "scoops of ice cream?"))
 }
 
-
 # plot
 png("example_sequentialdiff.png", 
     width = 18, height = 18,
@@ -407,13 +295,13 @@ png("example_sequentialdiff.png",
     pointsize = 10)
 
 par(cex.main = 1.5, mar = c(5, 5, 3, 3) + 0.1, mgp = c(3.5, 1, 0), 
-    cex.lab = 1.5, font.lab = 2, cex.axis = 1.6, bty = "n", las = 1)
+    cex.lab = 1.5, font.lab = 2, cex.axis = 1.5, bty = "n", las = 1)
 
 plot(1:length(conversion$n1), ylim = c(-1, 1), 
      type = "n", xlab = "", ylab = "", yaxt = "n", xaxt = "n", bty = "n", 
      bg = "grey")
 
-axis(1, at = seq(0, 100, by = 10), labels = seq(0, 100, 10), 
+axis(1, at = seq(0, 200, by = 10), labels = seq(0, 200, 10), 
      lwd = 2, lwd.ticks = 2, line = -0.1)
 axis(2, at = seq(-1, 1, 0.2), labels = seq(-1, 1, 0.2),
      lwd = 2, lwd.ticks = 2, line = -0.2)
@@ -421,10 +309,11 @@ axis(2, at = seq(-1, 1, 0.2), labels = seq(-1, 1, 0.2),
 mtext("n", side = 1, line = 3, las = 1, cex = 2, font = 2, adj = 0.5)
 mtext(expression(paste("Difference", ~delta)), side = 2, line = 3.25, cex = 2, font = 2, las = 0)
 
-polygon(c(1:length(conversion$n1),length(conversion$n1):1), c(CI.upper, rev(CI.lower)), 
+polygon(c(1:length(CI.upper),length(CI.upper):1), c(CI.upper, rev(CI.lower)), 
         col = "lightgrey", border = NA)
 
+abline(h = 0,  lwd = 2, col = "darkgrey", lty = 2)
 lines(mean.ar, lwd = 2, col = "orange")
-abline(h = 0, lwd = 2, col = "darkgrey", lty = 2)
 
 dev.off()
+
