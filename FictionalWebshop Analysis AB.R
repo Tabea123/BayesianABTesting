@@ -31,6 +31,7 @@ library(HDInterval)
 # read in data
 data <- read.csv2("SimulatedWebshopData1.csv")
 
+
 A_success <- ifelse(subset(data, version == "A")$successes == 1, 1, 0)
 B_success <- ifelse(subset(data, version == "B")$successes == 1, 1, 0)
 
@@ -98,6 +99,20 @@ prob.ab(a1, b1, a2, b2)
 #-------------------------------------------------------------------------------
 
 
+conversion <- as.list(read.csv2("SimulatedWebshopData2.csv"))
+
+x <- c(conversion$y1[-1],1131)
+A <- x - conversion$y1
+hitsA <- c(0, A[-20001])
+
+y <- c(conversion$y2[-1],1275)
+B <- y - conversion$y2
+hitsB <- c(0, B[-20001])
+
+data2 <- data.frame(y1 = hitsA, n1 = conversion$n1, y2 = hitsB ,n2 = conversion$n2)
+data2 <- data2[-1,]
+
+
 ## compare difference methods
 ### Exact Difference
 a1 <- 1
@@ -105,13 +120,13 @@ b1 <- 1
 a2 <- 1
 b2 <- 1
 
-delta.exact  <- numeric(length(A_success))
-for(i in 1:length(A_success)){
-  
-  a2 <- a2 + A_success[i]
-  b2 <- b2 + ifelse(A_success == 1, 0, 1)[i]
-  a1 <- a1 + B_success[i]
-  b1 <- b1 + ifelse(B_success == 1, 0, 1)[i]
+delta.exact  <- numeric(length(data2$y1))
+for(i in 1:length(data2$y1)){
+
+  a2 <- a2 + data2$y1[i]
+  b2 <- b2 + ifelse(data2$y1 == 1, 0, 1)[i]
+  a1 <- a1 + data2$y2[i]
+  b1 <- b1 + ifelse(data2$y2 == 1, 0, 1)[i]
   
   delta.exact[i] <- integrate(pdf.diff2, 0, 1, stop.on.error = F)$value
 }
@@ -123,13 +138,14 @@ b1 <- 1
 a2 <- 1
 b2 <- 1
 
-delta.approx <- numeric(length(A_success))
-for(i in 1:length(A_success)){
-  
-  a1 <- a1 + A_success[i]
-  b1 <- b1 + ifelse(A_success == 1, 0, 1)[i]
-  a2 <- a2 + B_success[i]
-  b2 <- b2 + ifelse(B_success == 1, 0, 1)[i]
+delta.approx <- numeric(length(data2$y1))
+
+for(i in 1:length(data2$y1)){
+
+  a1 <- a1 + data2$y1[i]
+  b1 <- b1 + ifelse(data2$y1 == 1, 0, 1)[i]
+  a2 <- a2 + data2$y2[i]
+  b2 <- b2 + ifelse(data2$y2 == 1, 0, 1)[i]
   
   mu1       <- a1/(a1+b1)
   sigma1    <- sqrt((a1*b1)/((a1+b1)^2*(a1+b1+1)))
@@ -145,17 +161,18 @@ for(i in 1:length(A_success)){
 
 
 #### H+ vs H-
-posprob_Hplus <- numeric(length(A_success))
+posprob_Hplus <- numeric(length(data2$y1))
 
-for(i in 1:length(A_success)){
-  conversion <- list(y1 = cumsum(A_success)[1:i], y2 = cumsum(B_success)[1:i], 
-                     n1 = 1:length(A_success[1:i]), n2 = 1:length(B_success[1:i]))
+for(i in 1:length(data2$y1)){
+  
+  conversion1 <- list(y1 = cumsum(data2$y1)[1:i], y2 = cumsum(data2$y2)[1:i], 
+                      n1 = 1:length(data2$y1[1:i]), n2 = 1:length(data2$y2[1:i]))
   
   
   plus.minus <- c(0, 1/2, 1/2, 0) # H+ vs H0
   names(plus.minus) <- c("H1", "H+", "H-", "H0")
   
-  AB2 <- ab_test(conversion, prior_prob = plus.minus)  # uses default normal prior
+  AB2 <- ab_test(conversion1, prior_prob = plus.minus)  # uses default normal prior
   posprob_Hplus[i] <- AB2$post_prob[2]
   print(paste("I'm on it!", i))
 }
@@ -165,11 +182,11 @@ png("webshop_sequentialdiff.png", width = 18, height = 18, units = "cm", res = 6
 par(cex.main = 1.5, mar = c(5, 5, 3, 3) + 0.1, mgp = c(3.5, 1, 0), 
     cex.lab = 2, font.lab = 2, cex.axis = 1.2, bty = "n", las = 1)
 
-plot(delta.approx, type = "l", ylim = c(0, 1), xlim = c(0, 10000),
+plot(delta.approx, type = "l", ylim = c(0, 1), xlim = c(0, 20000),
      bty = "n", xlab = "", ylab = "", axes = F, las = 1, col = "lightblue", 
      lwd = 2, cex.lab = 1.5, cex.axis = 1.8, cex.main = 1.5)
 
-axis(1, at = seq(0, 10000, 500), labels = seq(0, 10000, 500), 
+axis(1, at = seq(0, 20000, 2000), labels = seq(0, 20000, 2000), 
      lwd = 2, lwd.ticks = 2, line = -0.1)
 axis(2, at = seq(0, 1, 0.1), lwd = 2, lwd.ticks = 2, line = -0.2)
 
@@ -251,8 +268,8 @@ dev.off()
 
 ### Data Preprocessing
 
-data <- read.csv2("SimulatedWebshopData2.csv") 
-conversion <- as.list(data[-1,])
+data3 <- read.csv2("SimulatedWebshopData2.csv") 
+conversion2 <- as.list(data3[-1,])
 
 ### Analyze the results
 
@@ -284,15 +301,15 @@ dev.off()
 ## Hypothesis Testing
 
 # success probabilities
-round(tail(conversion$y1,1)/tail(conversion$n1, 1), 3)
-round(tail(conversion$y2,1)/tail(conversion$n2, 1), 3)
+round(tail(conversion2$y1,1)/tail(conversion2$n1, 1), 3)
+round(tail(conversion2$y2,1)/tail(conversion2$n2, 1), 3)
 
 # prior model probabilities: H+ = 0.5; H0 = 0.5
 plus.null <- c(0, 1/2, 0, 1/2) # H+ vs H0
 names(plus.null) <- c("H1", "H+", "H-", "H0")
-AB.indifferent   <- ab_test(conversion, indifferent, prior_prob = plus.null) 
-AB.conservative  <- ab_test(conversion, conservative, prior_prob = plus.null) 
-AB.optimistic    <- ab_test(conversion, optimistic, prior_prob = plus.null) 
+AB.indifferent   <- ab_test(conversion2, indifferent, prior_prob = plus.null) 
+AB.conservative  <- ab_test(conversion2, conservative, prior_prob = plus.null) 
+AB.optimistic    <- ab_test(conversion2, optimistic, prior_prob = plus.null) 
 
 AB   <- ab_test(conversion, prior_prob = plus.null) 
 
@@ -337,41 +354,73 @@ png("posterior_opt.png", width = 600, height = 600)
 plot_posterior(AB.optimistic, what = "logor")
 dev.off()
 
-# sequential analysis of CI 
-CI.upper <- NULL
-CI.lower <- NULL
-
-# monitor CI 
-for(i in seq(7, length(conversion$n1), 1)){
-  ab1 <- ab_test(lapply(conversion, '[', 1:i), prior_prob = plus.null, posterior = T)
-  # store values in two separate vectors
-  CI.lower <- c(CI.lower, hdi(ab1$post$Hplus$logor)[1])
-  CI.upper <- c(CI.upper, hdi(ab1$post$Hplus$logor)[2])
-}
-
-CI.df <- data.frame(CI.lower, CI.upper)
-y.upper <- CI.df[,1]
-y.lower <- CI.df[,2]
-
-plot(1:length(conversion$n1), ylim = c(0,3), 
-     type = "n", xlab = "", ylab = "", yaxt = "n", bty = "n", axes = FALSE, 
-     cex.lab = 1.3, cex.axis = 1.3, cex.main = 2, las = 1, pch = 21, lwd = 4,   
-     bg = "grey")
-
-axis(1, at = seq(0, 20000, by = 1000), labels = seq(0, 20000, by = 1000))
-axis(2, at = seq(0, 3, 0.5), labels = seq(0, 3, 0.5))
-
-mtext("n", side = 1, line = 3, las = 1, cex = 2, font = 0.2, adj = 0.5)
-mtext("Width of CI", side = 2, line = 3, cex = 2, font = 2, las = 0)
-
-
-polygon(c(7:length(conversion$n1), length(conversion$n1):7), c(y.upper, rev(y.lower)), 
-        col = "lightgrey", border = NA)
-
 
 ## Compare Marginal Likelihoods
 round(exp(AB.conservative$logml$logmlplus - AB.indifferent$logml$logmlplus) ,1)
 round(exp(AB.optimistic$logml$logmlplus - AB.indifferent$logml$logmlplus) ,1)
 round(exp(AB.optimistic$logml$logmlplus - AB.conservative$logml$logmlplus) ,1)
+
+
+#-------------------------------------------------------------------------------
+#                                                               
+# #### 5. Sequential Analysis of Delta ####
+#                                                               
+#-------------------------------------------------------------------------------
+
+seq_posprob <- numeric(length(conversion2$n1))
+
+CI.upper <- numeric(length(conversion2$n1))
+CI.lower <- numeric(length(conversion2$n1))
+
+mean.ar <- numeric(length(conversion2$n1))
+
+for(i in 3:length(conversion2$n1)){
+  
+  datapoints <- as.list(as.data.frame(conversion2)[3:i,])
+  
+  plus.minus <- c(0, 1/2, 1/2, 0) # H+ vs H0
+  names(plus.minus) <- c("H1", "H+", "H-", "H0")
+  
+  AB4 <- ab_test(datapoints, prior_prob = plus.minus)  # uses default normal prior
+  seq_posprob[i] <- AB4$post_prob[2]
+  
+  AB5 <- ab_test(datapoints, prior_prob = plus.minus, 
+                 posterior = T, nsamples = 10000)
+  CI.upper[i] <- as.numeric(hdi(AB5$post$H1$arisk)[1])
+  CI.lower[i] <- as.numeric(hdi(AB5$post$H1$arisk)[2])
+  
+  mean.ar[i] <- mean(AB5$post$H1$arisk)
+  
+  print(paste("Can I have", i, "scoops of ice cream?"))
+}
+
+# plot
+png("example_sequentialdiff.png", 
+    width = 18, height = 18,
+    units = "cm", res = 600,
+    pointsize = 10)
+
+par(cex.main = 1.5, mar = c(5, 5, 3, 3) + 0.1, mgp = c(3.5, 1, 0), 
+    cex.lab = 1.5, font.lab = 2, cex.axis = 1.5, bty = "n", las = 1)
+
+plot(1:length(conversion2$n1), ylim = c(-1, 1), 
+     type = "n", xlab = "", ylab = "", yaxt = "n", xaxt = "n", bty = "n", 
+     bg = "grey")
+
+axis(1, at = seq(0, 20000, by = 1000), labels = seq(0, 20000, 1000), 
+     lwd = 2, lwd.ticks = 2, line = -0.1)
+axis(2, at = seq(-1, 1, 0.2), labels = seq(-1, 1, 0.2),
+     lwd = 2, lwd.ticks = 2, line = -0.2)
+
+mtext("n", side = 1, line = 3, las = 1, cex = 2, font = 2, adj = 0.5)
+mtext(expression(paste("Difference", ~delta)), side = 2, line = 3.25, cex = 2, font = 2, las = 0)
+
+polygon(c(1:length(CI.upper),length(CI.upper):1), c(CI.upper, rev(CI.lower)), 
+        col = "lightgrey", border = NA)
+
+abline(h = 0,  lwd = 2, col = "darkgrey", lty = 2)
+lines(mean.ar, lwd = 2, col = "orange")
+
+dev.off()
 
 
