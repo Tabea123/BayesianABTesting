@@ -67,18 +67,18 @@ posprob_Hplus <- numeric(length(data2$y1))
 
 for(i in 1:length(data2$y1)){
 
-  conversion1 <- list(y1 = cumsum(data2$y1)[1:i], y2 = cumsum(data2$y2)[1:i], 
-                     n1 = 1:length(data2$y1[1:i]), n2 = 1:length(data2$y2[1:i]))
+  conversion1 <- list(y1 = cumsum(data2$y1)[1:i], 
+                      y2 = cumsum(data2$y2)[1:i], 
+                      n1 = 1:length(data2$y1[1:i]), 
+                      n2 = 1:length(data2$y2[1:i]))
   
+  plus.minus <- c(0, 1/2, 1/2, 0) # H+ vs H-
+  names(plus.minus) <- c("H1", "H+", "H-", "H0")
   
+  AB2 <- ab_test(conversion1, prior_prob = plus.minus)  
+  posprob_Hplus[i] <- AB2$post_prob[2]
   
-plus.minus <- c(0, 1/2, 1/2, 0) # H+ vs H0
-names(plus.minus) <- c("H1", "H+", "H-", "H0")
-
-AB2 <- ab_test(conversion1, prior_prob = plus.minus)  # uses default normal prior
-posprob_Hplus[i] <- AB2$post_prob[2]
-
-print(paste("Can I have", i, "scoops of ice cream?"))
+  print(paste("Can I have", i, "scoops of ice cream?"))
 }
 
 
