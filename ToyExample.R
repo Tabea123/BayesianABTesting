@@ -27,9 +27,7 @@ library(grDevices)
 
 # read in data
 data <- read.csv2("example_data1.csv")
-
-# greate list of data for later calculations
-conversion <- as.list(read.csv2("example_data2.csv")[,-1])
+conversion <- as.list(read.csv2("example_data2.csv")[-1,-1])
 
 
 #-------------------------------------------------------------------------------
@@ -142,7 +140,6 @@ png("example_approximation.png",  width = 18, height = 18,
 par(cex.main = 1.5,  mar = c(5, 5, 3, 3) + 0.1, mgp = c(3.5, 1, 0), 
     cex.lab = 1.5, font.lab = 2, cex.axis = 1.6, bty = "n", las = 1)
 
-
 plot(density(delta), lwd = 4,
       main = "", xlab = "", ylab = " ", xlim = c(-1, 1), ylim = c(0, 6),
       axes = FALSE, yaxt = "n", xaxt = "n")
@@ -240,9 +237,10 @@ png("example_priorposterior.png",
     width = 18, height = 18,
     units = "cm", res = 600,
     pointsize = 10)
-plot_posterior(AB3, what = "logor", hypothesis = "H+")
+plot_posterior(AB3, what = 'logor')
 dev.off()
 
+# independent posterior distributions
 plot_posterior(AB3, what = "p1p2")
 
 
@@ -259,25 +257,19 @@ plot_posterior(AB3, what = "p1p2")
 # #### 7. Sequential Analysis of Delta
 #                                                               
 #-------------------------------------------------------------------------------
-library(dplyr)
-
-seq_posprob <- numeric(length(conversion$n1))
 
 CI.upper <- numeric(length(conversion$n1))
 CI.lower <- numeric(length(conversion$n1))
 
 mean.ar <- numeric(length(conversion$n1))
 
-for(i in 3:length(conversion$n1)){
+for(i in 2:length(conversion$n1)){
   
-  conversion1 <- as.list(as.data.frame(conversion)[3:i,])
+  conversion1 <- as.list(as.data.frame(conversion)[2:i,])
   
   plus.minus <- c(0, 1/2, 1/2, 0) # H+ vs H0
   names(plus.minus) <- c("H1", "H+", "H-", "H0")
-  
-  AB4 <- ab_test(conversion1, prior_prob = plus.minus)  # uses default normal prior
-  seq_posprob[i] <- AB4$post_prob[2]
-  
+
   AB5 <- ab_test(conversion1, prior_prob = plus.minus, 
                  posterior = T, nsamples = 10000)
   CI.upper[i] <- as.numeric(hdi(AB5$post$H1$arisk)[1])
@@ -288,6 +280,11 @@ for(i in 3:length(conversion$n1)){
   print(paste("Can I have", i, "scoops of ice cream?"))
 }
 
+mean.ar  <- mean.ar[-1]
+CI.upper <- CI.upper[-1]
+CI.lower <- CI.lower[-1]
+
+
 # plot
 png("example_sequentialdiff.png", 
     width = 18, height = 18,
@@ -295,7 +292,7 @@ png("example_sequentialdiff.png",
     pointsize = 10)
 
 par(cex.main = 1.5, mar = c(5, 5, 3, 3) + 0.1, mgp = c(3.5, 1, 0), 
-    cex.lab = 1.5, font.lab = 2, cex.axis = 1.5, bty = "n", las = 1)
+    cex.lab = 1.5, font.lab = 2, cex.axis = 1.3, bty = "n", las = 1)
 
 plot(1:length(conversion$n1), ylim = c(-1, 1), 
      type = "n", xlab = "", ylab = "", yaxt = "n", xaxt = "n", bty = "n", 
