@@ -176,7 +176,7 @@ AB2 <- ab_test(conversion, prior_prob = plus.minus,
                posterior = T, nsamples = 1000000)
 
 par(cex.main = 1.5,  mar = c(5, 5, 3, 3) + 0.1, mgp = c(3.5, 1, 0), 
-    cex.lab = 1.5, font.lab = 2, cex.axis = 1.6, bty = "n", las = 1)
+    cex.lab = 1.5, font.lab = 2, cex.axis = 1.3, bty = "n", las = 1)
 
 plot(density(AB2$post$Hplus$arisk), type = "n", main = "", bty = "n",
      yaxt = "n", xaxt = "n", axes = F, xlim = c(-1, 1), ylim = c(0, 6))
@@ -197,8 +197,8 @@ axis(2, at = seq(0, 6, 1),
 #-------------------------------------------------------------------------------
 
 # success probabilities
-tail(conversion$y1,1)/tail(conversion$n1, 1)
-tail(conversion$y2,1)/tail(conversion$n2, 1)
+round(tail(conversion$y1,1)/tail(conversion$n1, 1), 3)
+round(tail(conversion$y2,1)/tail(conversion$n2, 1), 3)
 
 
 ## Hypothesis Testing
@@ -210,6 +210,9 @@ AB3 <- ab_test(conversion, prior_prob = plus.null)  # uses default normal prior
 
 # print results of ab_test
 print(AB3) 
+
+# plot BF robustness plot
+plot_robustness(AB3, mu_range = c(0, 3), sigma_range = c(0.1, 1))
 
 # visualize prior and posterior probabilities of the hypotheses 
 # as probability wheels
@@ -223,6 +226,9 @@ plot_sequential(AB3)
 
 # plot posterior distribution of log odds ratio
 plot_posterior(AB3, what = "logor")
+
+# independent posterior distributions
+plot_posterior(AB3, what = "p1p2")
 
 #-------------------------------------------------------------------------------
 #                                                               
@@ -244,6 +250,33 @@ for(i in 1:length(data4$y1)){
   seq_posprob[i] <- AB4$post_prob[2]
   
   AB5 <- ab_test(conversion, prior_prob = plus.minus, 
+                 posterior = T, nsamples = 10000)
+  CI.upper[i] <- as.numeric(hdi(AB5$post$H1$arisk)[1])
+  CI.lower[i] <- as.numeric(hdi(AB5$post$H1$arisk)[2])
+  
+  mean.ar[i] <- mean(AB5$post$H1$arisk)
+  
+  print(paste("Can I have", i, "scoops of ice cream?"))
+}
+
+seq_posprob <- numeric(length(conversion$n1))
+
+CI.upper <- numeric(length(conversion$n1))
+CI.lower <- numeric(length(conversion$n1))
+
+mean.ar <- numeric(length(conversion$n1))
+
+for(i in 5:length(conversion$n1)){
+  
+  conversion1 <- as.list(as.data.frame(conversion)[5:i,])
+  
+  plus.minus <- c(0, 1/2, 1/2, 0) # H+ vs H0
+  names(plus.minus) <- c("H1", "H+", "H-", "H0")
+  
+  AB4 <- ab_test(conversion1, prior_prob = plus.minus)  # uses default normal prior
+  seq_posprob[i] <- AB4$post_prob[2]
+  
+  AB5 <- ab_test(conversion1, prior_prob = plus.minus, 
                  posterior = T, nsamples = 10000)
   CI.upper[i] <- as.numeric(hdi(AB5$post$H1$arisk)[1])
   CI.lower[i] <- as.numeric(hdi(AB5$post$H1$arisk)[2])
@@ -275,10 +308,11 @@ axis(2, at = seq(-1, 1, 0.2), labels = seq(-1, 1, 0.2),
 mtext("n", side = 1, line = 3, las = 1, cex = 2, font = 2, adj = 0.5)
 mtext(expression(paste("Difference", ~delta)), side = 2, line = 3.25, cex = 2, font = 2, las = 0)
 
-polygon(c(1:length(conversion$n1),length(conversion$n1):1), c(CI.upper, rev(CI.lower)), 
+polygon(c(1:length(conversion$n1[-c(1:4)]),length(conversion$n1[-c(1:4)]):1), 
+        c(CI.upper[-c(1:4)], rev(CI.lower[-c(1:4)])), 
         col = "lightgrey", border = NA)
 
-lines(mean.ar, lwd = 2, col = "orange")
 abline(h = 0, lwd = 2, col = "darkgrey", lty = 2)
+lines(mean.ar[-c(1:4)], lwd = 2, col = "orange")
 
 dev.off()
