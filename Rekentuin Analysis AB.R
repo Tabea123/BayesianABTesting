@@ -27,7 +27,7 @@ library(HDInterval)
 data <- read.csv2("SimluatedRekentuinData.csv")
 
 # load preprocessed data 
-data4 <- read.csv2("Rekentuin_ABTestData.csv") 
+data4 <- read.csv2("Rekentuin_ABTestData.csv")[-1,] 
 conversion <- as.list(data4)
 
 
@@ -141,15 +141,13 @@ sigma.ges <- sigma2 + sigma1
 
 # plot 
 delta <- rnorm(1000000, mu.ges, sigma.ges)
-HDI <- hdi(delta)
 
 par(cex.main = 1.5, mar = c(5.5, 5.5, 5.9, 3) + 0.1, mgp = c(3.5, 1, 0), 
     cex.lab = 1.5, font.lab = 2, cex.axis = 1.8, bty = "n", las = 1)
 
-hist(delta, 
-     freq = F, main = "", xlab = "", ylab = " ", 
-     xlim = c(-1, 1), ylim = c(0, 6),
-     axes = FALSE, breaks = 17, yaxt = "n", xaxt = "n", col = "grey")
+plot(density(delta), lwd = 4,
+     main = "", xlab = "", ylab = " ", xlim = c(-1, 1), ylim = c(0, 6),
+     axes = FALSE, yaxt = "n", xaxt = "n")
 
 axis(1, at = c(-1, -0.75, -0.50, -0.25, 0, 0.25, 0.50, 0.75, 1), 
      labels = c(-1, -0.75, -0.50, -0.25, 0, 0.25, 0.50, 0.75, 1),
@@ -158,14 +156,17 @@ axis(2, at = seq(0, 6, 1),
      lwd = 2, lwd.ticks = 2, line = -0.2)
 
 mtext(expression(paste("Difference", ~delta)), 
-      side = 1, line = 3, cex = 2.4, font = 2, adj = 0.5)
-mtext("Density", side = 2, line = 3, cex = 2.4, font = 2, las = 0)
+      side = 1, line = 3, las = 1, cex = 2, font = 2, adj = 0.5)
+mtext("Density", side = 2, line = 2.5, cex = 2, font = 2, las = 0)
 
-lines(density(delta), lwd = 4)
-
-arrows(x0 = HDI[1], y0 = 4, x1 = HDI[2], y1 = 4, angle = 90, 
+HDI <- hdi(delta)
+arrows(x0 = HDI[1], y0 = 4.5, x1 = HDI[2], y1 = 4.5, angle = 90, 
        length = 0.1, code = 3, lwd = 2.2)
-text("95% HDI", x = mean(HDI), y = 4.5, cex = 1.8)
+
+upper <- round(HDI[1],3)
+lower <- round(HDI[2],3)
+text(1, 5.5, paste0("95% HDI: [", upper, ";", lower, "]"), cex = 1.5, pos = 2)
+text(1, 6, paste0("median= ", round(median(delta),3)), cex = 1.5, pos = 2)
 
 
 ### alternatively compute posterior probability of absolute risk
