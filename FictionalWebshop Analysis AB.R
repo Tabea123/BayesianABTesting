@@ -129,13 +129,13 @@ par(cex.main = 1.5,  mar = c(5, 5, 3, 3) + 0.1, mgp = c(3.5, 1, 0),
 
 plot(density(delta), lwd = 4,
      main = "", xlab = "", ylab = " ",  
-     xlim = c(-0.05, 0.05), ylim = c(0, 100),
+     xlim = c(-0.1, 0.1), ylim = c(0, 100),
      axes = FALSE, yaxt = "n", xaxt = "n")
 
-axis(1, at = seq(-0.05, 0.05, 0.01), 
-     labels = seq(-0.05, 0.05, 0.01), 
+axis(1, at = seq(-0.1, 0.1, 0.025), 
+     labels = seq(-0.1, 0.1, 0.025), 
      lwd = 2, lwd.ticks = 2, line = -0.1)
-axis(2, at = seq(0, 100, 20),  
+axis(2, at = seq(0, 100, 10),  
      lwd = 2, lwd.ticks = 2, line = -0.2)
 
 mtext(expression(paste("Difference", ~delta)), 
@@ -150,8 +150,8 @@ arrows(x0 = HDI[1], y0 = 65, x1 = HDI[2], y1 = 65, angle = 90,
 
 upper <- round(HDI[1],3)
 lower <- round(HDI[2],3)
-text(0.05, 85, paste0("95% HDI: [", upper, ";", lower, "]"), cex = 1.5, pos = 2)
-text(0.05, 95, paste0("median = ", round(median(delta),3)),  cex = 1.5, pos = 2)
+text(0.1, 85, paste0("95% HDI: [", upper, ";", lower, "]"), cex = 1.5, pos = 2)
+text(0.1, 95, paste0("median = ", round(median(delta),3)),  cex = 1.5, pos = 2)
 
 dev.off()
 
@@ -161,12 +161,12 @@ names(plus.minus) <- c("H1", "H+", "H-", "H0")
 AB2 <- ab_test(conversion, prior_prob = plus.minus, 
                posterior = T, nsamples = 1000000)
 
-png("webshop_hpluspost.png", width = 18, height = 18, units = "cm", res = 600)
+png("webshop_delta.png", width = 18, height = 18, units = "cm", res = 600)
 
 par(cex.main = 1.5,  mar = c(5, 5, 3, 3) + 0.1, mgp = c(3.5, 1, 0), 
     cex.lab = 1.5, font.lab = 2, cex.axis = 1.3, bty = "n", las = 1)
 
-plot(density(AB2$post$Hplus$arisk), type = "n", main = "", bty = "n",
+plot(density(AB2$post$Hplus$arisk), type = "n", main = "", bty = "n", xlab = "",
      yaxt = "n", xaxt = "n", axes = F, xlim = c(-0.1, 0.1), ylim = c(0, 100))
 
 lines(density(AB2$post$Hplus$arisk), lwd = 2)
@@ -176,6 +176,9 @@ axis(1, at = seq(-0.1, 0.1, 0.025),
      lwd = 2, lwd.ticks = 2, line = -0.1)
 axis(2, at = seq(0, 100, 10),  
      lwd = 2, lwd.ticks = 2, line = -0.2)
+
+mtext(expression(paste("Difference", ~delta)), 
+      side = 1, line = 3, las = 1, cex = 2, font = 2, adj = 0.5)
 
 dev.off()
 
@@ -189,11 +192,6 @@ dev.off()
 ### Analyze the results
 
 ## Specify Three Priors
-# indifferent person
-indifferent <- elicit_prior(q = c(-1.25, 0, 1.25), 
-                            prob = c(.025, .5, .975), 
-                            what = "logor")
-
 # conservative person; OR: 1.05
 conservative <- elicit_prior(q = c(0, 0.05, 0.1), prob = c(.025, .5, .975), 
                              what = "logor")
@@ -204,7 +202,7 @@ optimistic <- elicit_prior(q = c(0.13, 0.18, 0.23), prob = c(.025, .5, .975),
 
 # plot three priors for log odds ratio
 png("webshop_prior1.png", width = 18, height = 18, units = "cm", res = 600)
-plot_prior(indifferent, what = "logor", hypothesis = "H+") # truncated normal
+plot_prior(what = "logor", hypothesis = "H+") # truncated normal
 dev.off()
 png("webshop_prior2.png", width = 18, height = 18, units = "cm", res = 600)
 plot_prior(conservative, what = "logor", hypothesis = "H+")
@@ -222,7 +220,7 @@ round(tail(conversion$y2,1)/tail(conversion$n2, 1), 3)
 # prior model probabilities: H+ = 0.5; H0 = 0.5
 plus.null <- c(0, 1/2, 0, 1/2) # H+ vs H0
 names(plus.null) <- c("H1", "H+", "H-", "H0")
-AB.indifferent   <- ab_test(conversion, indifferent, prior_prob = plus.null) 
+AB.indifferent   <- ab_test(conversion, prior_prob = plus.null) 
 AB.conservative  <- ab_test(conversion, conservative, prior_prob = plus.null) 
 AB.optimistic    <- ab_test(conversion, optimistic, prior_prob = plus.null) 
 
@@ -236,38 +234,36 @@ round(AB.optimistic$bf$bfplus0,3)
 
 # visualize prior and posterior probabilities of the hypotheses 
 # as probability wheels
-png("webshop_probwheel.png", width = 20, height = 18, units = "cm", res = 600)
-par(mfrow = c(3, 2), cex.main = 1.5, mar = c(0.25, 0.5, 1.5, 2)+0.5) 
-prob_wheel(AB.indifferent, type = "prior")
-title("Prior Probabilities")
+png("webshop_probwheel1.png", width = 18, height = 12, units = "cm", res = 600)
 prob_wheel(AB.indifferent)
-title("Posterior Probabilities")
-prob_wheel(AB.conservative, type = "prior")
+dev.off()
+png("webshop_probwheel2.png", width = 18, height = 12, units = "cm", res = 600)
 prob_wheel(AB.conservative)
-prob_wheel(AB.optimistic, type = "prior")
+dev.off()
+png("webshop_probwheel3.png", width = 18, height = 12, units = "cm", res = 600)
 prob_wheel(AB.optimistic)
 dev.off()
 
 # plot posterior probabilities of the hypotheses sequentially
+cairo_pdf("indifferent_sequential.pdf", width = 530/72, height = 400/72)
 plot_sequential(AB.indifferent)
-plot_sequential(AB.conservative)
-plot_sequential(AB.optimistic)
+dev.off()
 
 # plot BF robustness
+cairo_pdf("indifferent_robustness.pdf", width = 530/72, height = 400/72)
 plot_robustness(AB.indifferent)
-plot_robustness(AB.conservative)
-plot_robustness(AB.optimistic)
+dev.off()
 
 ## Parameter Estimation
 
 # plot posterior distribution of log odds ratio
-png("posterior_ind.png", width = 600, height = 600)
+png("posterior_ind.png", width = 18, height = 18, units = "cm", res = 600)
 plot_posterior(AB.indifferent, what = "logor")
 dev.off()
-png("posterior_con.png", width = 600, height = 600)
+png("posterior_con.png", width = 18, height = 18, units = "cm", res = 600)
 plot_posterior(AB.conservative, what = "logor")
 dev.off()
-png("posterior_opt.png", width = 600, height = 600)
+png("posterior_opt.png", width = 18, height = 18, units = "cm", res = 600)
 plot_posterior(AB.optimistic, what = "logor")
 dev.off()
 
@@ -312,7 +308,7 @@ for(i in 3:length(conversion$n1)){
 }
 
 # plot
-png("example_sequentialdiff.png", 
+png("webshop_sequentialdiff2.png", 
     width = 18, height = 18,
     units = "cm", res = 600,
     pointsize = 10)
@@ -320,13 +316,13 @@ png("example_sequentialdiff.png",
 par(cex.main = 1.5, mar = c(5, 5, 3, 3) + 0.1, mgp = c(3.5, 1, 0), 
     cex.lab = 1.5, font.lab = 2, cex.axis = 1.5, bty = "n", las = 1)
 
-plot(1:length(conversion$n1), ylim = c(-1, 1), 
+plot(1:length(conversion$n1), ylim = c(-0.1, 0.1),  
      type = "n", xlab = "", ylab = "", yaxt = "n", xaxt = "n", bty = "n", 
      bg = "grey")
 
 axis(1, at = seq(0, 20000, by = 1000), labels = seq(0, 20000, 1000), 
      lwd = 2, lwd.ticks = 2, line = -0.1)
-axis(2, at = seq(-1, 1, 0.2), labels = seq(-1, 1, 0.2),
+axis(2, at = seq(-0.1, 0.1, 0.05), labels = seq(-0.1, 0.1, 0.05),
      lwd = 2, lwd.ticks = 2, line = -0.2)
 
 mtext("n", side = 1, line = 3, las = 1, cex = 2, font = 2, adj = 0.5)
@@ -335,7 +331,6 @@ mtext(expression(paste("Difference", ~delta)), side = 2, line = 3.25, cex = 2, f
 polygon(c(1:length(CI.upper),length(CI.upper):1), c(CI.upper, rev(CI.lower)), 
         col = "lightgrey", border = NA)
 
-abline(h = 0,  lwd = 2, col = "darkgrey", lty = 2)
 lines(mean.ar, lwd = 2, col = "orange")
 
 dev.off()
