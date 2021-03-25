@@ -4,27 +4,46 @@
 ##                                                                            ##
 ################################################################################
 
-# note: run AppellF1Function.R, and PDFDiffBetaFunction.R before running this script
+# input: example_data2.csv or SimulatedWebshopData2.csv
+#
+# output: example_pdeltazero.png or webshop_pdeltazero.png
+#
+# note: run AppellF1Function.R and PDFDiffBetaFunction.R before running this script
 
-conversion <- as.list(read.csv2("example_data2.csv")[,-1])
+library(abtest)
 
-x <- c(conversion$y1[-1],35)
-A <- x - conversion$y1
-hitsA <- c(0, A[-201])
+# conversion <- as.list(read.csv2("example_data2.csv")[,-1])
+# 
+# x <- c(conversion$y1[-1],35)
+# A <- x - conversion$y1
+# hitsA <- c(0, A[-length(A)])
+# 
+# y <- c(conversion$y2[-1],50)
+# B <- y - conversion$y2
+# hitsB <- c(0, B[-length(B)])
+# 
+# data2 <- data.frame(y1 = hitsA, n1 = conversion$n1, y2 = hitsB ,n2 = conversion$n2)
+# data2 <- data2[-1,]
 
-y <- c(conversion$y2[-1],50)
-B <- y - conversion$y2
-hitsB <- c(0, B[-201])
-
-data2 <- data.frame(y1 = hitsA, n1 = conversion$n1, y2 = hitsB ,n2 = conversion$n2)
-data2 <- data2[-1,]
+# conversion <- as.list(read.csv2("SimulatedWebshopData2.csv"))
+# 
+# x <- c(conversion$y1[-1], tail(conversion$y1, 1))
+# A <- x - conversion$y1
+# hitsA <- c(0, A[-length(A)])
+# 
+# y <- c(conversion$y2[-1], tail(conversion$y2, 1))
+# B <- y - conversion$y2
+# hitsB <- c(0, B[-length(B)])
+# 
+# data2 <- data.frame(y1 = hitsA, n1 = conversion$n1, y2 = hitsB ,n2 = conversion$n2)
+# data2 <- data2[-1,]
 
 a1 <- 1
 b1 <- 1
 a2 <- 1
 b2 <- 1
 
-### exact diff
+### Exact Difference
 delta.exact  <- numeric(length(data2$y1))
 for(i in 1:length(data2$y1)){
   
@@ -50,18 +69,18 @@ b1 <- b1 + ifelse(data2$y1 == 1, 0, 1)[i]
 a2 <- a2 + data2$y2[i]
 b2 <- b2 + ifelse(data2$y2 == 1, 0, 1)[i]
 
-mu1       <- a1/(a1+b1)
-sigma1    <- sqrt((a1*b1)/((a1+b1)^2*(a1+b1+1)))
-mu2       <- a2/(a2+b2)
-sigma2    <- sqrt((a2*b2)/((a2+b2)^2*(a2+b2+1)))
-mu.ges    <- mu2 - mu1
-sigma.ges <- sigma1 + sigma2
+mu1     <- a1/(a1+b1)
+var1    <- ((a1*b1)/((a1+b1)^2*(a1+b1+1)))
+mu2     <- a2/(a2+b2)
+var2    <- ((a2*b2)/((a2+b2)^2*(a2+b2+1)))
+mu.ges  <- mu2 - mu1
+var.ges <- (var1 + var2)
 
-norm.approx <- function(x){dnorm(x, mean = mu.ges, sd = sigma.ges)}
+norm.approx <- function(x){dnorm(x, mean = mu.ges, sd = sqrt(var.ges))}
 delta.approx[i] <- integrate(norm.approx, 0, 1)$value
 }
 
-#### H+ vs H
+#### H+ vs H-
 
 posprob_Hplus <- numeric(length(data2$y1))
 
@@ -77,21 +96,20 @@ for(i in 1:length(data2$y1)){
   
   AB2 <- ab_test(conversion1, prior_prob = plus.minus)  
   posprob_Hplus[i] <- AB2$post_prob[2]
-  
-  print(paste("Can I have", i, "scoops of ice cream?"))
+  print(paste("Iteration", i))
 }
 
 
 ### Plotting
-png("example_pdeltazero.png", width = 18, height = 18, units = "cm", res = 600)
+png("example_pdeltazero1.png", width = 18, height = 18, units = "cm", res = 600)
 par(cex.main = 1.5, mar = c(5, 5, 3, 3) + 0.1, mgp = c(3.5, 1, 0), 
     cex.lab = 2, font.lab = 2, cex.axis = 1.2, bty = "n", las = 1)
 
-plot(delta.approx, type = "l", ylim = c(0, 1), xlim = c(0, 200),
+plot(delta.approx, type = "l", ylim = c(0, 1), xlim = c(0, length(delta.approx)),
      bty = "n", xlab = "", ylab = "", axes = F, las = 1, col = "lightblue", 
      lwd = 2, cex.lab = 1.5, cex.axis = 1.8, cex.main = 1.5)
 
-axis(1, at = seq(0, 200, 20), labels = seq(0, 200, 20), 
+axis(1, at = seq(0, length(delta.approx), 10), labels = seq(0, length(delta.approx), 10), 
      lwd = 2, lwd.ticks = 2, line = -0.1)
 axis(2, at = seq(0, 1, 0.1), lwd = 2, lwd.ticks = 2, line = -0.2)
 
@@ -103,7 +121,7 @@ lines(delta.exact, lty = 2, lwd = 2, col = "pink")
 lines(posprob_Hplus, lty = 3, lwd = 2, col = "orange")
 
 
-legend(110, 0.2, lty = c(1, 2, 3), bty = "n",
+legend(115, 0.2, lty = c(1, 2, 3), bty = "n",
        legend = c("Normal Approximation","Exact Difference", 
                   "Posterior Probability H+"), 
        col = c("lightblue", "pink", "orange"))
