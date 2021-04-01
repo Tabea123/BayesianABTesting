@@ -7,12 +7,14 @@
 # input:  -
 # output: example_data1.csv, example_data2.csv
 
+library(dplyr)
 
 user <- 1:200
 
 ## simulate successes
-A <- sample(c(rep(0, 65),rep(1, 35)))
-B <- sample(c(rep(0, 50),rep(1, 50)))
+A <- sample(c(rep(1, 50),rep(0, 50)))
+B <- sample(c(rep(1, 65),rep(0, 35)))
+
 
 ## add version information
 version <- rep(c("A", "B"), each = 100)
