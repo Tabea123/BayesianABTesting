@@ -4,7 +4,7 @@
 ##                                                                            ##
 ################################################################################
 
-# input: example_data1.csv, example_data2.csv
+# input: bees_data1.csv, bees_data2.csv
 #
 # output: example_prior.png, example_posterior.png, example_pdfdiff.png,
 #        example_approximation.png, example_hpluspost.png, example_probwheel.png,
@@ -31,8 +31,8 @@ library(HDInterval)
 library(grDevices)
 
 # read in data
-data <- read.csv2("example_data1.csv")
-conversion <- as.list(read.csv2("example_data2.csv")[-1,-1])
+data <- read.csv2("bees_data1.csv")
+conversion <- as.list(read.csv2("bees_data2.csv")[-1,-1])
 
 
 #-------------------------------------------------------------------------------
@@ -240,7 +240,7 @@ png("example_robustness.png",
     width = 18, height = 18,
     units = "cm", res = 600,
     pointsize = 10)
-plot_robustness(AB3, mu_range = c(0, 2), sigma_range = c(0.1, 1))
+plot_robustness(AB3, mu_range = c(0, 2), sigma_range = c(0.1, 1), bftype = "BF+0")
 dev.off()
 
 ## Parameter Estimation
@@ -271,12 +271,68 @@ plot_posterior(AB3, what = "p1p2")
 #                                                               
 #-------------------------------------------------------------------------------
 
+CI.upper <- numeric(length(conversion$y1))
+CI.lower <- numeric(length(conversion$y1))
+mean.diff <- numeric(length(conversion$y1))
+
+conversion <- lapply(conversion, function(x) c(0, x))
+
+a1 <- conversion$y1
+b1 <- conversion$n1 - conversion$y1
+a2 <- conversion$y2
+b2 <- conversion$n2 - conversion$y2
+
+for(i in 1:length(conversion$y1)){
+  
+  diff.values <- rbeta(1000000, 1 + a2[i], 1 + b2[i]) - rbeta(1000000, 1 + a1[i], 1 + b1[i])
+   
+  CI.upper[i] <- as.numeric(hdi(diff.values)[1])
+  CI.lower[i] <- as.numeric(hdi(diff.values)[2])
+   
+  mean.diff[i] <- mean(diff.values)
+  
+  print(paste("I am counting", i, "snowflakes"))
+}
+
+png("example_sequentialdiff.png",
+    width = 18, height = 18,
+    units = "cm", res = 600,
+    pointsize = 10)
+
+par(cex.main = 1.5, mar = c(5, 5, 3, 3) + 0.1, mgp = c(3.5, 1, 0), 
+    cex.lab = 1.5, font.lab = 2, cex.axis = 1.3, bty = "n", las = 1)
+
+plot(1:length(conversion$y1), ylim = c(-1, 1), 
+     type = "n", xlab = "", ylab = "", yaxt = "n", xaxt = "n", bty = "n", 
+     bg = "grey")
+
+axis(1, at = seq(0, 200, by = 10), labels = seq(0, 200, 10), 
+     lwd = 2, lwd.ticks = 2, line = -0.1)
+axis(2, at = seq(-1, 1, 0.2), labels = seq(-1, 1, 0.2),
+     lwd = 2, lwd.ticks = 2, line = -0.2)
+
+mtext("n", side = 1, line = 3, las = 1, cex = 2, font = 2, adj = 0.5)
+mtext(expression(paste("Difference", ~delta)), side = 2, line = 3.25, cex = 2, font = 2, las = 0)
+
+polygon(c(1:length(CI.upper),length(CI.upper):1), c((CI.upper), rev(CI.lower)), 
+        col = "lightgrey", border = NA)
+
+abline(h = 0,  lwd = 2, col = "darkgrey", lty = 2)
+lines(mean.diff, lwd = 2, col = "orange")
+
+dev.off()
+
+
+################################################################################
+
+# old version with absolute risk
+
 CI.upper <- numeric(length(conversion$n1))
 CI.lower <- numeric(length(conversion$n1))
 
 mean.ar <- numeric(length(conversion$n1))
 
-for(i in 2:length(conversion$n1)){ # ab_test requires y1, n1, y2, n2 to be non-zero
+for(i in 3:length(conversion$n1)){ # ab_test requires y1, n1, y2, n2 to be non-zero
   
   conversion1 <- as.list(as.data.frame(conversion)[2:i,])
   
@@ -300,10 +356,10 @@ CI.lower <- CI.lower[-1]
 
 
 # plot
-png("example_sequentialdiff.png", 
-    width = 18, height = 18,
-    units = "cm", res = 600,
-    pointsize = 10)
+# png("example_sequentialdiff.png", 
+#     width = 18, height = 18,
+#     units = "cm", res = 600,
+#     pointsize = 10)
 
 par(cex.main = 1.5, mar = c(5, 5, 3, 3) + 0.1, mgp = c(3.5, 1, 0), 
     cex.lab = 1.5, font.lab = 2, cex.axis = 1.3, bty = "n", las = 1)
@@ -326,5 +382,8 @@ polygon(c(1:length(CI.upper),length(CI.upper):1), c(CI.upper, rev(CI.lower)),
 abline(h = 0,  lwd = 2, col = "darkgrey", lty = 2)
 lines(mean.ar, lwd = 2, col = "orange")
 
-dev.off()
+# dev.off()
+
+
+
 
