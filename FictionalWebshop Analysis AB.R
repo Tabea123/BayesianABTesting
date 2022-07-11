@@ -27,8 +27,8 @@ rm(list = ls())
 #-------------------------------------------------------------------------------
 
 # packages needed
-library(bayesAB)
-library(abtest)
+library(bayesAB) # version 1.1.3
+library(abtest) # version 1.0.1
 library(HDInterval)
 
 data <- read.csv2("SimulatedWebshopData1.csv")

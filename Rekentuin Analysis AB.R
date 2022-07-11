@@ -20,11 +20,11 @@
 # rm(list = ls())
 
 # packages needed
+library(bayesAB) # version 1.1.3
+library(abtest) # version 1.0.1
 library(dplyr)
-library(bayesAB)
 library(hypergeo)
 library(tolerance)
-library(abtest)
 library(HDInterval)
 
 # load simulated data

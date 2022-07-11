@@ -23,10 +23,10 @@
 # rm(list = ls())
 
 # packages needed
-library(bayesAB)
+library(bayesAB) # version 1.1.3
+library(abtest) # version 1.0.1
 library(hypergeo)
 library(tolerance)
-library(abtest)
 library(HDInterval)
 library(grDevices)
 
