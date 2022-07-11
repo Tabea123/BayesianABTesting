@@ -4,12 +4,16 @@
 ##                                                                            ##
 ################################################################################
 
-# input:  SimluatedRekentuinData.csv, Rekentuin_ABTestData.csv
+# input:  SimulatedRekentuinData.csv, Rekentuin_ABTestData.csv
 # output: -
+#
+# note: This script depends on functions that are defined in the scripts appellF1.R,
+# pfdiff.R, and probab.R. Make sure to run these scripts before running this script.
+
 
 #-------------------------------------------------------------------------------
 #                                                               
-# 0. Set Working Directory and Load/Preprocess Data                    
+#           #### 0. Set Working Directory and Load/Preprocess Data ####                    
 #                                                               
 #-------------------------------------------------------------------------------
 
@@ -24,12 +28,11 @@ library(abtest)
 library(HDInterval)
 
 # load simulated data
-data <- read.csv2("SimluatedRekentuinData.csv")
+data <- read.csv2("SimulatedRekentuinData.csv")
 
 # load preprocessed data 
 data4 <- read.csv2("Rekentuin_ABTestData.csv")[-1,] 
 conversion <- as.list(data4)
-
 
 #-------------------------------------------------------------------------------
 #                                                               
@@ -200,7 +203,6 @@ axis(2, at = seq(0, 6, 1),
 round(tail(conversion$y1,1)/tail(conversion$n1, 1), 3)
 round(tail(conversion$y2,1)/tail(conversion$n2, 1), 3)
 
-
 ## Hypothesis Testing
 
 # prior model probabilities: H+ = 0.5; H0 = 0.5
@@ -221,7 +223,6 @@ prob_wheel(AB3)
 # plot posterior probabilities of the hypotheses sequentially
 plot_sequential(AB3)
 
-
 ## Parameter Estimation
 
 # plot posterior distribution of log odds ratio
@@ -232,32 +233,9 @@ plot_posterior(AB3, what = "p1p2")
 
 #-------------------------------------------------------------------------------
 #                                                               
-# #### 7. Sequential Analysis of Delta
+#                   #### 7. Sequential Analysis of Delta ####
 #                                                               
 #-------------------------------------------------------------------------------
-
-seq_posprob <- numeric(length(data4$y1))
-CI.upper    <- numeric(length(data4$y1))
-CI.lower    <- numeric(length(data4$y1))
-mean.ar     <- numeric(length(data4$y1))
-
-for(i in 1:length(data4$y1)){
-
-  plus.minus <- c(0, 1/2, 1/2, 0) # H+ vs H0
-  names(plus.minus) <- c("H1", "H+", "H-", "H0")
-  
-  AB4 <- ab_test(conversion, prior_prob = plus.minus)  # uses default normal prior
-  seq_posprob[i] <- AB4$post_prob[2]
-  
-  AB5 <- ab_test(conversion, prior_prob = plus.minus, 
-                 posterior = T, nsamples = 10000)
-  CI.upper[i] <- as.numeric(hdi(AB5$post$H1$arisk)[1])
-  CI.lower[i] <- as.numeric(hdi(AB5$post$H1$arisk)[2])
-  
-  mean.ar[i] <- mean(AB5$post$H1$arisk)
-  
-  print(paste("Can I have", i, "scoops of ice cream?"))
-}
 
 seq_posprob <- numeric(length(conversion$n1))
 
